@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "Book": {
+      "title": "Book",
+      "description": "Represents a book volume available in the library",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "isbn": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "publisher": { "type": "string" },
+        "publishDate": { "type": "string" },
+        "pageCount": { "type": "number" },
+        "format": { "type": "string", "enum": ["Hardcover", "Paperback", "E-Book"] },
+        "copiesCount": { "type": "number" },
+        "availableCopies": { "type": "number" },
+        "pdfUrl": { "type": "string" },
+        "location": { "type": "string" },
+        "edition": { "type": "string" },
+        "subject": { "type": "string" }
+      },
+      "required": ["id", "title", "author", "category", "isbn", "format", "copiesCount", "availableCopies"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Information about a registered student user",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "rollNumber": { "type": "string" },
+        "department": { "type": "string" },
+        "semester": { "type": "number" },
+        "password": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "session": { "type": "string" },
+        "address": { "type": "string" },
+        "photoUrl": { "type": "string" }
+      },
+      "required": ["name", "rollNumber", "department", "semester", "isActive"]
+    },
+    "LibraryStatus": {
+      "title": "LibraryStatus",
+      "description": "The current opening/closing state and schedules of the library",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+        "openingTime": { "type": "string" },
+        "closingTime": { "type": "string" },
+        "weeklySchedule": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "status", "openingTime", "closingTime", "weeklySchedule", "updatedAt"]
+    },
+    "BorrowRecord": {
+      "title": "BorrowRecord",
+      "description": "A ledger item tracking standard physical book checkouts and return status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookId": { "type": "string" },
+        "bookTitle": { "type": "string" },
+        "bookImage": { "type": "string" },
+        "studentRoll": { "type": "string" },
+        "studentName": { "type": "string" },
+        "borrowDate": { "type": "string" },
+        "durationDays": { "type": "number" },
+        "dueDate": { "type": "string" },
+        "returnDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING_APPROVE", "BORROWED", "PENDING_RETURN", "RETURNED"] },
+        "fineAmount": { "type": "number" }
+      },
+      "required": ["id", "bookId", "bookTitle", "studentRoll", "studentName", "borrowDate", "durationDays", "dueDate", "status", "fineAmount"]
+    },
+    "Fine": {
+      "title": "Fine",
+      "description": "Overdue penalties and fee records per student account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentRoll": { "type": "string" },
+        "studentName": { "type": "string" },
+        "amount": { "type": "number" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["UNPAID", "PAID", "WAIVED"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "studentRoll", "studentName", "amount", "reason", "status", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Alert broadcasted or sent to a specific student profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentRoll": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["INFO", "OVERDUE", "APPROVAL"] }
+      },
+      "required": ["id", "studentRoll", "title", "message", "createdAt", "isRead", "type"]
+    },
+    "Librarian": {
+      "title": "Librarian",
+      "description": "Information about a library worker and their shifts managed by admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "mobile": { "type": "string" },
+        "address": { "type": "string" },
+        "shift": { "type": "string" }
+      },
+      "required": ["id", "name", "shift"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Library highlight photographs accessible conceptually in gallery showcase sections",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "imageUrl", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/library_status/{statusId}": {
+      "schema": { "$ref": "#/entities/LibraryStatus" },
+      "description": "Weekly schedule, opening hours, and active live status of the library"
+    },
+    "/books/{bookId}": {
+      "schema": { "$ref": "#/entities/Book" },
+      "description": "All indexed volumes of the library system"
+    },
+    "/students/{studentId}": {
+      "schema": { "$ref": "#/entities/Student" },
+      "description": "Student roster profile collection keys"
+    },
+    "/borrows/{borrowId}": {
+      "schema": { "$ref": "#/entities/BorrowRecord" },
+      "description": "Active and returned borrowing logs"
+    },
+    "/fines/{fineId}": {
+      "schema": { "$ref": "#/entities/Fine" },
+      "description": "Accrued fines ledger items"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Inbox notifications for users or system admins"
+    },
+    "/librarians/{librarianId}": {
+      "schema": { "$ref": "#/entities/Librarian" },
+      "description": "Library admin workers/shift lists"
+    },
+    "/gallery/{galleryItemId}": {
+      "schema": { "$ref": "#/entities/GalleryItem" },
+      "description": "Library catalog and environmental picture showcases"
+    }
+  }
+}
