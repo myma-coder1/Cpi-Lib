@@ -634,7 +634,7 @@ export default function ProfileDetails({ user, onUpdateUser, setCurrentView }: P
                       type="email" 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="address@university.edu"
+                      placeholder="address@institute.edu"
                       className="w-full border border-slate-205 pl-11 pr-4 focus:ring-2 focus:ring-blue-105/40 focus:border-blue-500 rounded-[14px] h-14 text-xs font-semibold text-slate-800 bg-white placeholder-slate-400"
                     />
                   </div>

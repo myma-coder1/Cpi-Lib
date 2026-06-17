@@ -1722,7 +1722,7 @@ export default function HomeView({
           <div className="max-w-xl relative z-10">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-2 font-sans">Ready to begin your academic session?</h2>
             <p className="text-xs text-slate-300 leading-relaxed font-sans">
-              Sign in with your university credentials today to secure active textbook holdings, create bookmarks, and pay small dues digitally.
+              Sign in with your institute credentials today to secure active textbook holdings, create bookmarks, and pay small dues digitally.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 min-w-[200px] relative z-10 w-full sm:w-auto">
@@ -1864,7 +1864,7 @@ export default function HomeView({
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 font-sans flex items-center gap-2">
                     <Megaphone className="w-5 h-5 text-[#1E40AF]" />
-                    <span>University Notice Archive</span>
+                    <span>Institute Notice Archive</span>
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">Explore active administrative instructions, guidelines, and shift schedules.</p>
                 </div>

@@ -346,7 +346,7 @@ export default function App() {
             // Handcrafted high-fidelity portal matching requirements
             <div className="max-w-md mx-auto my-16 px-6 py-10 bg-white border border-slate-200 shadow-sm rounded-none font-sans select-none animate-fade-in" id="login-panel">
               <div className="text-center mb-8">
-                <span className="text-xs uppercase bg-blue-500/10 text-blue-600 px-3 py-1 rounded-sm font-semibold font-mono">University Portal</span>
+                <span className="text-xs uppercase bg-blue-500/10 text-blue-600 px-3 py-1 rounded-sm font-semibold font-mono">Institute Portal</span>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mt-3">{branding?.shortName || "CpiLib"} Terminal</h2>
                 <p className="text-xs text-slate-500 mt-1">Please authenticate with your Roll credentials to access profiles and catalog shelves.</p>
               </div>
@@ -359,7 +359,7 @@ export default function App() {
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-wide">University Roll Number</label>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-wide">Institute Roll Number</label>
                   <input 
                     type="text" 
                     placeholder="e.g. 1001, 1002, cst-1001..." 
@@ -381,10 +381,6 @@ export default function App() {
                     required
                     id="password-login-input"
                   />
-                </div>
-
-                <div className="p-2.5 bg-blue-50/50 border border-blue-100 rounded-none text-[11px] text-blue-800 font-normal leading-relaxed">
-                  <strong>Access Hint:</strong> Type any valid roll number (e.g. <code>1001</code>) and password <code>pass-1001</code>. For librarian privileges, access with roll <code>ADMIN</code> and password <code>admin123</code>.
                 </div>
 
                 <button 

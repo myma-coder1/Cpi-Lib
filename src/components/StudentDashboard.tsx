@@ -596,7 +596,7 @@ export default function StudentDashboard({
                 </span>
                 <div>
                   <p className="font-bold text-slate-900">Good Standing (ঋণ বা জরিমানা মুক্ত)</p>
-                  <p className="text-[11px] text-slate-500 mt-1">Excellent job! You have zero outstanding overdue fine balances on your university ledger.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Excellent job! You have zero outstanding overdue fine balances on your institute ledger.</p>
                 </div>
               </div>
             ) : (
