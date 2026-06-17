@@ -849,13 +849,14 @@ async function runServer() {
   });
 
   // API - Notification fetch inbox
-  app.get('/api/notifications/:roll', async (req, res) => {
+  app.get('/api/notifications/:roll(*)', async (req, res) => {
     try {
       const roll = req.params.roll;
-      if (!roll || roll === 'undefined' || roll === 'null') {
+      const decodedRoll = roll ? decodeURIComponent(roll).trim() : '';
+      if (!decodedRoll || decodedRoll === 'undefined' || decodedRoll === 'null') {
         return res.json([]);
       }
-      const list = await getNotificationsForRoll(roll);
+      const list = await getNotificationsForRoll(decodedRoll);
       res.json(list || []);
     } catch (err: any) {
       console.error(err);

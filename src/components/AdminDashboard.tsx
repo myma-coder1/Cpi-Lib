@@ -4,7 +4,7 @@ import {
   Trash2, Edit, Plus, FileText, Download, TrendingUp, Cpu, 
   Trash, Save, X, Search, CheckCircle, RefreshCw, AlertCircle,
   UserPlus, Eye, BookOpenCheck, HelpCircle, Settings, ChevronRight, ChevronLeft,
-  Printer, Grid, Info, BookCheck, Shield, Image as ImageIcon, Briefcase, Menu
+  Printer, Grid, Info, BookCheck, Shield, Image as ImageIcon, Briefcase, Menu, Upload
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 import { Book, Student, BorrowRecord, Fine, Librarian, GalleryItem } from '../types.js';
@@ -17,6 +17,37 @@ interface AdminDashboardProps {
   galleryItems: GalleryItem[];
   loadGalleryItems: () => void;
 }
+
+const compressImageAndSet = (file: File, callback: (base64: string) => void) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = (event) => {
+    const img = new Image();
+    img.src = event.target?.result as string;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 500;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_WIDTH) {
+        height = Math.round((height * MAX_WIDTH) / width);
+        width = MAX_WIDTH;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+        callback(compressedBase64);
+      } else {
+        callback(img.src);
+      }
+    };
+  };
+};
 
 export default function AdminDashboard({ 
   books, 
@@ -1608,15 +1639,74 @@ export default function AdminDashboard({
                       </div>
                     )}
 
-                    <div className="md:col-span-3">
-                      <label className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase tracking-wide">Unsplash Image URL (Optional)</label>
-                      <input 
-                        type="text" 
-                        value={formData.imageUrl} 
-                        onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
-                        className="w-full border border-slate-200 focus:ring-2 focus:ring-blue-105/45 focus:border-blue-500 rounded-[14px] h-14 px-4 text-xs text-slate-850 font-mono bg-white placeholder-slate-400" 
-                        placeholder="https://images.unsplash.com/..."
-                      />
+                    <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Image URL Input */}
+                      <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wide">Image URL (ছবি লিংক বা Unsplash)</label>
+                          <input 
+                            type="text" 
+                            value={formData.imageUrl} 
+                            onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
+                            className="w-full border border-slate-200 focus:ring-2 focus:ring-blue-105/45 focus:border-[#2563eb] rounded-lg h-10 px-3 text-xs text-slate-850 font-mono bg-white placeholder-slate-400" 
+                            placeholder="https://images.unsplash.com/..."
+                          />
+                        </div>
+                        {formData.imageUrl && !formData.imageUrl.startsWith('data:') && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">URL Preview Loaded</span>
+                            <div className="w-8 h-10 border border-slate-100 rounded overflow-hidden shadow-xs">
+                              <img src={formData.imageUrl} alt="preview" className="w-full h-full object-contain" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Direct Upload Option */}
+                      <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wide">Or, Direct Image Upload (সরাসরি ছবি আপলোড)</label>
+                          <div className="relative border-2 border-dashed border-slate-200 hover:border-[#2563eb] transition-all rounded-lg p-3 text-center bg-white cursor-pointer group">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  compressImageAndSet(file, (base64) => {
+                                    setFormData({ ...formData, imageUrl: base64 });
+                                  });
+                                }
+                              }}
+                            />
+                            <div className="flex flex-col items-center justify-center">
+                              <Upload className="w-5 h-5 text-slate-400 group-hover:text-[#2563eb] mb-1 duration-200" />
+                              <span className="text-[11px] font-medium text-slate-600 group-hover:text-[#2563eb] duration-200">
+                                Click or drag picture
+                              </span>
+                              <span className="text-[9px] text-slate-400 mt-0.5">JPEG, PNG up to 5MB</span>
+                            </div>
+                          </div>
+                        </div>
+                        {formData.imageUrl && formData.imageUrl.startsWith('data:') && (
+                          <div className="mt-2.5 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Uploaded file</span>
+                              <div className="w-8 h-10 border border-slate-100 rounded overflow-hidden shadow-xs">
+                                <img src={formData.imageUrl} alt="preview" className="w-full h-full object-contain" />
+                              </div>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                              className="text-[10px] text-rose-500 hover:underline cursor-pointer"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="md:col-span-3">
@@ -2371,26 +2461,80 @@ export default function AdminDashboard({
                     </button>
                   </div>
                   <form onSubmit={handleSaveGallery} className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Image URL (ছবি লিংক) *</label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="url" 
-                          required
-                          value={galForm.imageUrl}
-                          onChange={e => setGalForm({ ...galForm, imageUrl: e.target.value })}
-                          placeholder="https://images.unsplash.com/photo-... or custom URL"
-                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-none font-mono"
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => setGalForm({ ...galForm, imageUrl: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&auto=format&fit=crop&q=80" })}
-                          className="bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 text-[10px] uppercase font-bold tracking-wider text-slate-650 shrink-0"
-                        >
-                          Use Preset Unsplash
-                        </button>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* URL Option */}
+                      <div className="bg-slate-50 border border-slate-200/60 p-3 rounded-xl flex flex-col justify-between">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Image URL (ছবি লিংক)</label>
+                          <div className="flex gap-1.5">
+                            <input 
+                              type="text" 
+                              value={galForm.imageUrl}
+                              onChange={e => setGalForm({ ...galForm, imageUrl: e.target.value })}
+                              placeholder="https://images.unsplash.com/..."
+                              className="w-full bg-white border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-blue-500 rounded-lg font-mono placeholder-slate-400"
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => setGalForm({ ...galForm, imageUrl: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&auto=format&fit=crop&q=80" })}
+                              className="bg-white hover:bg-slate-50 border border-slate-200 px-2.5 text-[9px] uppercase font-bold text-slate-600 shrink-0 rounded-lg transition-colors cursor-pointer"
+                            >
+                              Preset
+                            </button>
+                          </div>
+                        </div>
+                        {galForm.imageUrl && !galForm.imageUrl.startsWith('data:') && (
+                          <div className="mt-2.5 flex items-center gap-2">
+                            <span className="text-[9px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">Url Preview</span>
+                            <div className="w-12 h-8 border border-slate-100 rounded overflow-hidden shadow-xs">
+                              <img src={galForm.imageUrl} alt="preview" className="w-full h-full object-cover" />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1">Please provide an absolute HTTPS image URL (e.g., from Unsplash, Imgur, or direct links).</p>
+
+                      {/* Direct Upload Option */}
+                      <div className="bg-slate-50 border border-slate-200/60 p-3 rounded-xl flex flex-col justify-between">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Direct Upload (সরাসরি আপলোড)</label>
+                          <div className="relative border-2 border-dashed border-slate-200 hover:border-blue-500 transition-all rounded-lg p-2.5 text-center bg-white cursor-pointer group">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  compressImageAndSet(file, (base64) => {
+                                    setGalForm({ ...galForm, imageUrl: base64 });
+                                  });
+                                }
+                              }}
+                            />
+                            <div className="flex flex-col items-center justify-center">
+                              <Upload className="w-4 h-4 text-slate-400 group-hover:text-blue-500 duration-200" />
+                              <span className="text-[10px] font-medium text-slate-600 mt-0.5">Click to choose image</span>
+                            </div>
+                          </div>
+                        </div>
+                        {galForm.imageUrl && galForm.imageUrl.startsWith('data:') && (
+                          <div className="mt-2.5 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">File loaded</span>
+                              <div className="w-12 h-8 border border-slate-100 rounded overflow-hidden shadow-xs">
+                                <img src={galForm.imageUrl} alt="preview" className="w-full h-full object-cover" />
+                              </div>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => setGalForm({ ...galForm, imageUrl: '' })}
+                              className="text-[9px] text-rose-500 hover:underline cursor-pointer"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Caption Description (ক্যাপশন বর্ণনা) *</label>

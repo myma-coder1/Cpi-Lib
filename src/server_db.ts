@@ -535,6 +535,135 @@ export const BANGLA_BOOKS: Book[] = [
   }
 ];
 
+export function generate50EBooks(): Book[] {
+  const ebooks: Book[] = [];
+  const titles = [
+    "Introduction to Algorithms and Complexity",
+    "Data Structures in Modern Systems",
+    "Deep Learning and Neural Network Paradigms",
+    "The Rust Programming Language Essentials",
+    "TypeScript Design Patterns & Software Architecture",
+    "Advanced Web Engineering and Scalability",
+    "Operating Systems: Principles and Design",
+    "Foundations of Quantum Computation and Information",
+    "Classical Electrodynamics: A Computational Approach",
+    "Introduction to Spectroscopy and Molecular Structure",
+    "Statistical Thermodynamics for Chemical Engineers",
+    "Linear Algebra: Concepts, Applications, and Proofs",
+    "Real Analysis & Lebesgue Integration Foundations",
+    "Modern Probability and Mathematical Statistics",
+    "A Brief History of the Digital Revolution",
+    "Academic Research Methodologies: A Guide",
+    "The Novel of the Quadrangle",
+    "Midnight Compiler: Tales of the Hackers",
+    "The Echoes of Silicon Valley",
+    "Introduction to Artificial Intelligence",
+    "Cyber Security Defenses & Network Intrusion",
+    "Distributed Systems & Cloud Computing Scales",
+    "Functional Programming in Haskell & Scala",
+    "Mobile App Architecture and Kotlin Engineering",
+    "Database Internals: Engines and Optimization",
+    "The Physics of Semiconductors and Microchips",
+    "Organic Synthesis and Laboratory Protocols",
+    "Stochastic Calculus & Financial Math Models",
+    "The Pragmatic Scholar: Academic Study Habits",
+    "Scientific Computing & Numerical Analysis",
+    "Cyber Law & Digital Ethics in the AI Era",
+    "Advanced Thermodynamics and Phase Transitions",
+    "Modern Fluid Dynamics & Turbulence Models",
+    "Introduction to Cosmology & Astrophysics Theories",
+    "Inorganic Chemistry: Coordination Complexes",
+    "Genomics & Bioinformatics Algorithms",
+    "Quantum Optics and Laser Dynamics",
+    "Game Theory and Strategic Decision Models",
+    "Big Data Analytics & Apache Spark Foundations",
+    "Machine Learning Devops: Scaling MLOps",
+    "Computer Graphics: Principles & Ray Tracing",
+    "Information Theory & Channel Coding Methods",
+    "A Comprehensive Guide to Scholarly Writing",
+    "The Whispering Archives of Alexandria",
+    "Beyond the Horizon Lines of Automation",
+    "User Experience Design for Critical Systems",
+    "The Silicon Catalyst: Venture Ideation",
+    "Parallel Programming with CUDA and OpenMP",
+    "Introduction to Topology & Manifold Theories",
+    "Artificial Intelligence Ethics & Philosophical Dilemmas"
+  ];
+
+  const authors = [
+    "Dr. Amelia Watson", "Robert C. Martin", "Martin Fowler", "Prof. Thomas Cormen", "Donald Knuth",
+    "Dr. Sarah Jenkins", "Elena Rossi", "Marcus Thorne", "Kenji Sato", "Lisa M. Cheng",
+    "Dr. Julian Sterling", "Sarah Van Der Meer", "Elena Rodriguez", "Prof. Lucas Thorne", "Dr. Grace Hopper",
+    "Prof. Andrew Ng", "Dr. Linus Torvalds", "Prof. Alan Turing", "Prof. Richard Feynman"
+  ];
+
+  const categories = [
+    "Computer Science", "Programming", "Computer Science", "Programming", "Programming",
+    "Programming", "Computer Science", "Physics", "Physics", "Chemistry",
+    "Chemistry", "Mathematics", "Mathematics", "Mathematics", "Research Books",
+    "Research Books", "Novels", "Novels", "Novels", "Computer Science",
+    "Cyber Security", "Computer Science", "Programming", "Programming", "Computer Science",
+    "Physics", "Chemistry", "Mathematics", "Research Books", "Mathematics",
+    "Cyber Security", "Physics", "Physics", "Physics", "Chemistry",
+    "Computer Science", "Physics", "Mathematics", "Computer Science", "Computer Science",
+    "Computer Science", "Computer Science", "Research Books", "Novels", "Novels",
+    "Programming", "Research Books", "Programming", "Mathematics", "Research Books"
+  ];
+
+  const images = [
+    "https://images.unsplash.com/photo-1516321354820-c3b7a64e2c83?w=600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=600&auto=format&fit=crop"
+  ];
+
+  for (let i = 0; i < 50; i++) {
+    const title = titles[i];
+    const category = categories[i];
+    const author = authors[i % authors.length];
+    const isbn = `978-ebook-${10000 + i}`;
+    const imageUrl = images[i % images.length];
+    
+    const description = `This publication, "${title}" by ${author}, is an essential textbook volume for students and researchers in ${category}. Centered on academic excellence and modular design, it covers introductory to advanced aspects of the field.`;
+    
+    const ebookContentText = `Chapter 1: Foundations and Objectives of ${category}\n\n` +
+      `We begin by looking at the primary goals of "${title}". In modern academic environments, ${category} represents a fast-moving discipline requiring both theoretical rigor and practical experimental verification. The historical evolution of this field teaches us that systematic models and careful definitions are critical. By structuring information logically, students can grasp complex concepts and trace them to experimental solutions.\n\n` +
+      `Key metrics include performance, scalability, accuracy, and structural integrity. Across universities, learning pipelines depend heavily on accessible digital volumes. This E-Book facilitates immediate reading without wait times, ensuring parallel academic explorations.\n\n` +
+      `Chapter 2: Theoretical Models and Frameworks\n\n` +
+      `In this chapter, we develop the quantitative frameworks and scientific formulas necessary to analyze systems in ${category}. Whether utilizing advanced algorithmic matrices, quantum waves, or chemical kinetics, the focus remains on model optimization. We study case works derived from modern research labs at MIT, Cambridge, and Stanford.\n\n` +
+      `Each analytical step is thoroughly detailed with mathematical proofs and step-by-step logic. We encourage readers to attempt the laboratory problems at the end of each section to verify understanding of these foundational mechanics.\n\n` +
+      `Chapter 3: Future Directions & Industry Application\n\n` +
+      `Finally, we examine how the principles of "${title}" translate to industrial scales and global products. The integration of artificial intelligence, green resource footprints, and ethical guidelines will direct research throughout the coming decade.\n\n` +
+      `As scholars enter their senior semesters, preparing thesis documentation and engaging in collaborative projects becomes paramount. We hope this online volume serves as a reliable guide and stable catalog reference.`;
+
+    const pdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+
+    ebooks.push({
+      id: `ebook-seed-${i + 1}`,
+      title,
+      author,
+      category,
+      isbn,
+      imageUrl,
+      description,
+      publisher: "ScholarLib Digital Press",
+      publishDate: "January 2026",
+      pageCount: 220 + i * 5,
+      format: "E-Book",
+      copiesCount: 0,
+      availableCopies: 0,
+      pdfUrl,
+      ebookContentText,
+      location: "Online Access (E-Reader)",
+      edition: "Digital Edition 2026",
+      subject: `${category} Systems`
+    });
+  }
+
+  return ebooks;
+}
+
 export function generate1000Books(): Book[] {
   try {
     const booksJsonPath = path.join(process.cwd(), 'src', 'books.json');
@@ -550,7 +679,10 @@ export function generate1000Books(): Book[] {
     ...b,
     id: `book-${i + 1}`
   })) as Book[];
-  return [...mappedCore, ...BANGLA_BOOKS];
+  
+  const seedEBooks = generate50EBooks();
+  
+  return [...mappedCore, ...BANGLA_BOOKS, ...seedEBooks];
 }
 
 export interface LibraryDB {

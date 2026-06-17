@@ -739,22 +739,25 @@ export default function CatalogView({
                 return (
                   <div 
                     key={book.id || book.isbn} 
-                    className="bg-white border border-slate-200 hover:border-slate-350 hover:shadow-lg transition-all rounded-xl p-4 flex flex-col justify-between group overflow-hidden relative animate-fade-in text-left shadow-xs"
+                    className="bg-white border border-slate-250/60 hover:border-slate-300 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4.5 flex flex-col justify-between group overflow-hidden relative animate-fade-in text-left max-w-[320px] mx-auto w-full"
                     id={`book-card-${book.id || book.isbn}`}
                   >
                     <div>
                       {/* Premium Cover block with center contained layout */}
-                      <div className="relative w-full h-[350px] bg-[#f8f9fa] border border-slate-200 rounded-lg p-3 overflow-hidden flex items-center justify-center mb-4 select-none group-hover:bg-slate-50/50 transition-colors">
+                      <div className="book-cover-wrapper relative overflow-hidden flex items-center justify-center select-none rounded-xl border border-slate-100 bg-[#f8fafc] mb-4.5">
                         <img 
                           src={book.imageUrl || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=800'} 
                           alt={book.title}
                           loading="lazy"
                           referrerPolicy="no-referrer"
-                          className="w-full h-full object-contain object-center rounded-sm transition-transform duration-500 ease-out group-hover:scale-[1.08]"
+                          className="book-cover transition-transform duration-500 ease-out group-hover:scale-105"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=800';
                           }}
                         />
+
+                        {/* Hover elements */}
+                        <div className="absolute inset-0 bg-transparent pointer-events-none group-hover:bg-black/[0.01] transition-colors" />
 
                         {/* Top corner hover zoom action */}
                         <button 
@@ -762,7 +765,7 @@ export default function CatalogView({
                             e.stopPropagation();
                             setPreviewCoverUrl(book.imageUrl || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=800');
                           }}
-                          className="absolute right-2 top-2 p-1.5 bg-white/90 backdrop-blur-xs border border-slate-200 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer duration-200 hover:bg-white text-slate-700 shadow-sm"
+                          className="absolute right-3 top-3 p-2 bg-white border border-slate-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer duration-200 hover:bg-slate-50 text-slate-600 shadow-sm"
                           title="Zoom Cover Image"
                         >
                           <ZoomIn className="w-3.5 h-3.5" />
@@ -770,36 +773,20 @@ export default function CatalogView({
 
                         <button
                           onClick={(e) => toggleWishlist(book.id || book.isbn, e)}
-                          className={`absolute left-2 top-2 p-1.5 border rounded-full class-wishlist-toggle transition-all cursor-pointer shadow-sm ${
+                          className={`absolute left-3 top-3 p-2 border rounded-full class-wishlist-toggle transition-all cursor-pointer shadow-sm ${
                             isWishlisted 
-                              ? 'bg-rose-50 text-rose-500 border-rose-200' 
-                              : 'bg-white/90 backdrop-blur-xs text-slate-400 hover:text-rose-500 border-slate-200'
+                              ? 'bg-rose-50 text-rose-500 border-rose-105 opacity-100' 
+                              : 'bg-white text-slate-400 hover:text-rose-500 border-slate-100 opacity-0 group-hover:opacity-100 focus:opacity-100 duration-200'
                           }`}
                           title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
                         >
-                          <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-rose-500' : ''}`} />
+                          <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-rose-500 text-rose-500' : ''}`} />
                         </button>
-
-                        {/* Format / Availability Badge Overlay in cover bottom */}
-                        <div className="absolute bottom-2 left-2 right-2 flex justify-between gap-1">
-                          <span className={`text-[8px] font-bold tracking-wider px-2 py-1 rounded-md uppercase leading-none shadow-sm border ${
-                            book.format === 'E-Book' 
-                              ? 'bg-blue-500 text-white border-blue-600' 
-                              : isAvailable 
-                              ? 'bg-emerald-500 text-white border-emerald-600' 
-                              : 'bg-rose-500 text-white border-rose-600'
-                          }`}>
-                            {book.format === 'E-Book' ? 'E-Book 📖' : (isAvailable ? 'Available' : 'Borrowed')}
-                          </span>
-                          <span className="text-[8px] font-bold font-mono bg-slate-900/80 backdrop-blur-xs text-slate-200 px-1.5 py-0.5 rounded-md leading-relaxed">
-                            {book.copiesCount === 9999 ? '∞' : `${book.availableCopies}/${book.copiesCount} Pcs`}
-                          </span>
-                        </div>
                       </div>
 
                       {/* Content Section */}
                       <div className="space-y-1">
-                        <span className="text-[9.5px] font-bold text-[#0252CD] bg-blue-50/70 border border-blue-100 rounded-md px-1.5 py-0.5 inline-block uppercase tracking-wide">
+                        <span className="text-[10px] font-semibold text-[#2563eb] tracking-wide uppercase inline-block mb-1">
                           {book.category}
                         </span>
                         
@@ -811,63 +798,53 @@ export default function CatalogView({
                               setQuickViewBook(book);
                             }
                           }}
-                          className="font-sans font-bold text-xs text-slate-800 hover:text-blue-600 hover:underline mt-1.5 line-clamp-2 leading-snug cursor-pointer transition-colors"
+                          className="font-sans font-semibold text-xs+ text-slate-800 hover:text-[#2563eb] mt-0.5 line-clamp-2 leading-snug cursor-pointer transition-colors"
                         >
                           {highlightWord(book.title, localSearchText)}
                         </h4>
                         
-                        <p className="text-[10.5px] text-slate-500 font-medium">
-                          By: {highlightWord(book.author, localSearchText)}
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-1">
+                          {highlightWord(book.author, localSearchText)}
                         </p>
 
-                        {/* Rating Display */}
-                        <div className="flex items-center gap-1 mt-1 font-mono text-[10.5px] select-none text-amber-500">
-                          <div className="flex items-center">
-                            {Array.from({ length: 5 }, (_, idx) => (
-                              <Star 
-                                key={idx} 
-                                className={`w-3 h-3 ${idx < Math.floor(starRating) ? 'fill-amber-400 text-amber-400' : 'text-slate-204'}`} 
-                              />
-                            ))}
+                        {/* Rating Display and Availability in single row */}
+                        <div className="flex items-center justify-between pt-2.5 text-xs text-slate-600">
+                          <div className="flex items-center gap-1 font-sans select-none text-amber-500">
+                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <span className="font-semibold text-slate-700 ml-0.5">{starRating.toFixed(1)}</span>
                           </div>
-                          <span className="font-bold text-slate-700 ml-1">{starRating.toFixed(1)}</span>
+                          
+                          <span className={`text-[10px] font-semibold tracking-wide uppercase px-2.5 py-0.5 rounded-full ${
+                            book.format === 'E-Book' 
+                              ? 'bg-blue-50 text-[#2563eb]' 
+                              : isAvailable 
+                              ? 'bg-emerald-50 text-emerald-700' 
+                              : 'bg-rose-50 text-rose-700'
+                          }`}>
+                            {book.format === 'E-Book' ? 'E-Book' : (isAvailable ? 'Available' : 'Borrowed')}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-2 select-none">
-                      <div className="flex justify-between items-center text-[10px] font-mono text-slate-400">
-                        <span>ISBN: {book.isbn}</span>
-                        {isWishlisted && <span className="text-rose-500 font-bold text-[8.5px] uppercase">★ Wishlist</span>}
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setQuickViewBook(book)}
-                          className="w-full bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer text-center"
+                    <div className="mt-4.5 pt-3.5 border-t border-slate-100 select-none">
+                      {searchTarget === 'local' ? (
+                        <button 
+                          onClick={() => viewBookDetails(book.id)}
+                          className="w-full bg-[#2563eb] text-white hover:bg-[#2563eb]/95 active:scale-[0.98] py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1"
+                          id={`details-btn-${book.id}`}
                         >
-                          Quick View
+                          {book.format === 'E-Book' ? 'Read Digital Book' : 'Read & Borrow'}
                         </button>
-
-                        {searchTarget === 'local' ? (
-                          <button 
-                            onClick={() => viewBookDetails(book.id)}
-                            className="w-full bg-blue-600 text-white hover:bg-blue-750 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-0.5"
-                            id={`details-btn-${book.id}`}
-                          >
-                            Read/Borrow
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={() => importOpenLibraryBook(book)}
-                            className="w-full bg-emerald-600 text-white hover:bg-emerald-705 py-1.5 rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-0.5"
-                            id={`import-btn-${book.isbn}`}
-                          >
-                            Import
-                          </button>
-                        )}
-                      </div>
+                      ) : (
+                        <button 
+                          onClick={() => importOpenLibraryBook(book)}
+                          className="w-full bg-[#2563eb] text-white hover:bg-[#2563eb]/95 active:scale-[0.98] py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1"
+                          id={`import-btn-${book.isbn}`}
+                        >
+                          Import to Catalog
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

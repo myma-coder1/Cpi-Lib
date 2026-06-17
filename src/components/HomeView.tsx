@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Compass, BookOpen, Scale, Palette, Cpu, Heart, 
-  ChevronRight, Star, Languages, Phone, MapPin, Users, 
+  ChevronRight, ChevronLeft, Star, Languages, Phone, MapPin, Users, 
   Clock, Image as ImageIcon, Atom, Scroll, Gavel, Stethoscope,
-  Mail, MessageSquare, ExternalLink, Sparkles, AlertCircle
+  Mail, MessageSquare, ExternalLink, Sparkles, AlertCircle, X, Maximize2, Play, Pause
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Book, Librarian, GalleryItem, LibraryStatus } from '../types.js';
 
 interface HomeViewProps {
@@ -29,6 +29,21 @@ export default function HomeView({
 }: HomeViewProps) {
   const [localSearch, setLocalSearch] = useState('');
   const [statusData, setStatusData] = useState<LibraryStatus | null>(null);
+  const [recentBorrows, setRecentBorrows] = useState<Book[]>([]);
+
+  // Premium Gallery Carousel States
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
+  const [isAutoplayActive, setIsAutoplayActive] = useState(true);
+
+  // Auto scroll gallery preview slides
+  useEffect(() => {
+    if (!isAutoplayActive || galleryItems.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % galleryItems.length);
+    }, 5500);
+    return () => clearInterval(interval);
+  }, [isAutoplayActive, galleryItems.length]);
 
   useEffect(() => {
     fetch('/api/library-status')
@@ -36,6 +51,71 @@ export default function HomeView({
       .then(data => setStatusData(data))
       .catch(err => console.error("Could not fetch library status", err));
   }, []);
+
+  // Keyboard navigation listener for image lightbox popup
+  useEffect(() => {
+    if (!selectedGalleryItem || galleryItems.length === 0) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedGalleryItem(null);
+      } else if (e.key === 'ArrowRight') {
+        const currentIndex = galleryItems.findIndex(item => item.id === selectedGalleryItem.id);
+        if (currentIndex !== -1) {
+          const nextIndex = (currentIndex + 1) % galleryItems.length;
+          setSelectedGalleryItem(galleryItems[nextIndex]);
+        }
+      } else if (e.key === 'ArrowLeft') {
+        const currentIndex = galleryItems.findIndex(item => item.id === selectedGalleryItem.id);
+        if (currentIndex !== -1) {
+          const prevIndex = (currentIndex - 1 + galleryItems.length) % galleryItems.length;
+          setSelectedGalleryItem(galleryItems[prevIndex]);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedGalleryItem, galleryItems]);
+
+  useEffect(() => {
+    const fetchRecentBorrows = async () => {
+      try {
+        const res = await fetch('/api/admin/borrows');
+        if (res.ok) {
+          const records = await res.json();
+          const borrowedBooksMap: Book[] = [];
+          records.forEach((record: any) => {
+            const found = books.find(b => b.id === record.bookId || b.title === record.bookTitle);
+            if (found && !borrowedBooksMap.some(b => b.id === found.id)) {
+              borrowedBooksMap.push({
+                ...found,
+                borrowerName: record.studentName || 'Scholar Student'
+              } as any);
+            }
+          });
+          
+          if (borrowedBooksMap.length > 3) {
+            setRecentBorrows(borrowedBooksMap);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Could not fetch recent borrows:", err);
+      }
+      
+      // Fallback selection if no real database borrows yet to keep marquee vibrant
+      const fallbackList = books.slice(0, 8).map((b, i) => ({
+        ...b,
+        borrowerName: ['Sarah Jenkins', 'Elena Rossi', 'Kenji Sato', 'James Stevenson', 'Robert Karim', 'Anita Meyers', 'Lucas Thorne', 'Marcus Watson'][i % 8]
+      }));
+      setRecentBorrows(fallbackList);
+    };
+
+    if (books && books.length > 0) {
+      fetchRecentBorrows();
+    }
+  }, [books]);
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -425,6 +505,92 @@ export default function HomeView({
         </div>
       </section>
 
+      {/* 2.5 Recently Borrowed Live Marquee Stream */}
+      <section className="bg-slate-50/80 py-10 overflow-hidden relative border-b border-slate-205" id="recent-borrow-stream-section">
+        {/* Left and Right ambient fades for premium SaaS visual depth */}
+        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-sans">
+                সদস্যদের সাম্প্রতিক পঠিত বই সমূহ <span className="text-slate-400 font-sans font-light">| Live Loan Stream</span>
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-1 sm:mt-0 font-sans">
+              Currently requested volumes by faculty & student researchers. Click to view & borrow.
+            </p>
+          </div>
+        </div>
+
+        {/* Marquee Track Container */}
+        <div className="relative w-full">
+          <style>{`
+            @keyframes marqueeScroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            .marquee-track {
+              display: flex;
+              width: max-content;
+              animation: marqueeScroll 45s linear infinite;
+            }
+            .marquee-track:hover {
+              animation-play-state: paused;
+            }
+          `}</style>
+          
+          <div className="marquee-track gap-5 pl-4">
+            {recentBorrows && recentBorrows.length > 0 && [...recentBorrows, ...recentBorrows].map((book, idx) => {
+              const uniqueKey = `marquee-${book.id || book.isbn}-${idx}`;
+              return (
+                <div 
+                  key={uniqueKey}
+                  onClick={() => viewBookDetails(book.id)}
+                  className="w-[280px] bg-white border border-slate-200/80 hover:border-[#2563eb] hover:shadow-md transition-all duration-300 rounded-xl p-3 flex items-center gap-3.5 cursor-pointer shrink-0 select-none group"
+                >
+                  {/* Miniature Book Cover */}
+                  <div className="w-12 h-16 bg-slate-50 rounded-lg overflow-hidden border border-slate-100 flex items-center justify-center shrink-0">
+                    <img 
+                      src={book.imageUrl || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=200'} 
+                      alt={book.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  
+                  {/* Text details */}
+                  <div className="flex-grow min-w-0">
+                    <span className="text-[9px] font-semibold text-[#2563eb] tracking-wide uppercase">
+                      {book.category}
+                    </span>
+                    <h4 className="text-xs font-semibold text-slate-850 line-clamp-1 group-hover:text-[#2563eb] transition-colors leading-tight">
+                      {book.title}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                      By {book.author}
+                    </p>
+                    
+                    {/* Active borrower tag */}
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span className="text-[9.5px] font-medium font-sans text-slate-400">
+                        Borrowed by <span className="font-semibold text-slate-600">{(book as any).borrowerName || 'Scholar Student'}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* 3. New Arrivals Shelf Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14" id="new-arrivals-section">
         <div className="flex items-end justify-between mb-8">
@@ -440,49 +606,48 @@ export default function HomeView({
             <div 
               key={book.id}
               onClick={() => viewBookDetails(book.id)}
-              className="card-premium p-4 flex flex-col justify-between group cursor-pointer"
+              className="bg-white border border-slate-250/60 hover:border-slate-300 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left max-w-[320px] mx-auto w-full"
               id={`arrival-${book.id}`}
             >
               <div>
-                {/* Book cover container with realistic aspect ratio (approx 2:3) */}
-                <div className="relative w-full h-[220px] bg-slate-50/80 rounded-xl p-2.5 overflow-hidden border border-slate-105/85 flex items-center justify-center mb-3">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-r from-slate-200 to-transparent z-10"></div>
+                {/* Fixed cover container with light background and contain fit */}
+                <div className="relative w-full h-[240px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
                   <img 
                     src={book.imageUrl} 
                     alt={book.title}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain filter drop-shadow-sm group-hover:scale-104 transition-transform duration-300"
+                    className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
                   />
                   {idx === 0 && (
-                    <span className="absolute top-2 left-2 bg-[#F59E0B] text-white font-sans font-bold text-[8px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs leading-none">
+                    <span className="absolute top-2.5 left-2.5 bg-[#2563eb] text-white font-sans font-semibold text-[8px] px-2.5 py-1 rounded-full uppercase tracking-wider leading-none shadow-sm">
                       New
                     </span>
                   )}
                 </div>
 
-                <span className="text-[8.5px] bg-slate-100 text-slate-650 px-2 py-0.5 rounded-md font-bold uppercase tracking-tight block w-max mb-1.5">
+                <span className="text-[10px] font-semibold text-[#2563eb] tracking-wide uppercase inline-block mb-1">
                   {book.category}
                 </span>
 
-                <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-1 truncate group-hover:text-[#1E40AF] transition-colors leading-snug">
+                <h4 className="font-sans font-semibold text-xs+ text-slate-800 line-clamp-2 leading-snug group-hover:text-[#2563eb] transition-colors">
                   {book.title}
                 </h4>
-                <p className="text-[10px] text-slate-450 mt-0.5 truncate font-medium">By {book.author}</p>
+                <p className="text-xs text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
               </div>
 
-              {/* Added Availability indicators and Star review matrix for high-fidelity */}
-              <div className="pt-3 border-t border-slate-100 mt-3.5 flex items-center justify-between">
-                <div className="flex items-center gap-0.5 text-amber-400">
-                  <Star className="w-3 h-3 fill-current" />
-                  <span className="text-[9px] font-bold text-slate-600">4.8</span>
+              {/* Rating and availability on one row */}
+              <div className="pt-3 border-t border-slate-100 mt-4.5 flex items-center justify-between text-xs text-slate-600">
+                <div className="flex items-center gap-1 select-none text-amber-500">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span className="font-semibold text-slate-700 ml-0.5">4.8</span>
                 </div>
                 {book.copiesCount > 0 ? (
-                  <span className="text-[8.5px] font-extrabold text-[#1E40AF] bg-blue-50 px-2 py-0.5 rounded-md uppercase">
-                    {book.copiesCount} Available
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                    Available
                   </span>
                 ) : (
-                  <span className="text-[8.5px] font-extrabold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md uppercase">
-                    Loaned Out
+                  <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                    Borrowed
                   </span>
                 )}
               </div>
@@ -575,8 +740,8 @@ export default function HomeView({
       {/* 4.5 Library Showcase Gallery Section */}
       <section className="bg-slate-50 border-b border-slate-200 py-16" id="home-gallery-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 text-[#1E40AF] px-3.5 py-1.5 font-sans font-bold text-[9px] uppercase tracking-wider mb-3.5 border border-blue-100 rounded-md">
+          <div className="text-center max-w-2xl mx-auto mb-12 animate-fade-in">
+            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 text-[#1E40AF] px-3.5 py-1.5 font-sans font-bold text-[9px] uppercase tracking-wider mb-3.5 border border-blue-100 rounded-md select-none">
               <ImageIcon className="w-3.5 h-3.5" />
               <span>Library Photographic Showcase</span>
             </div>
@@ -592,40 +757,266 @@ export default function HomeView({
           </div>
 
           {galleryItems.length === 0 ? (
-            <div className="text-center py-12 bg-white card-premium p-8 select-none text-slate-405">
+            <div className="text-center py-12 bg-white card-premium p-8 select-none text-slate-400 rounded-2xl border border-slate-200">
               <ImageIcon className="w-10 h-10 mx-auto text-slate-300 mb-2" />
               <p className="text-xs font-bold font-sans">No gallery pictures currently cataloged.</p>
               <p className="text-[10px] text-slate-400 mt-1">Superintendent admins can add pictures from the Admin Dashboard.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 select-none" id="gallery-grid">
-              {galleryItems.map((item) => (
+            <div className="space-y-8 select-none">
+              {/* Primary Premium Showcase Slider */}
+              <div 
+                className="relative bg-slate-950 rounded-[24px] overflow-hidden shadow-2xl border border-slate-800/80 max-w-3xl mx-auto group/slider"
+                onMouseEnter={() => setIsAutoplayActive(false)}
+                onMouseLeave={() => setIsAutoplayActive(true)}
+              >
+                {/* Main Slide Panel with AnimatePresence */}
                 <div 
-                  key={item.id} 
-                  className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-[#1E40AF] transition-all duration-300 group shadow-xs hover:shadow-md flex flex-col"
-                  id={`gallery-item-${item.id}`}
+                  className="h-64 sm:h-96 md:h-[420px] relative overflow-hidden flex items-center justify-center cursor-pointer"
+                  onClick={() => setSelectedGalleryItem(galleryItems[activeSlide])}
                 >
-                  <div className="h-52 overflow-hidden relative bg-slate-100 flex items-center justify-center">
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.caption}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeSlide}
+                      initial={{ opacity: 0, scale: 1.025 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ duration: 0.45, ease: "easeInOut" }}
+                      className="absolute inset-0 w-full h-full"
+                    >
+                      <img 
+                        src={galleryItems[activeSlide].imageUrl} 
+                        alt={galleryItems[activeSlide].caption}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover object-center group-hover/slider:scale-103 transition-transform duration-700 ease-out brightness-[0.93]"
+                      />
+                      {/* Dark Gradient Overlay for Caption readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/35 pointer-events-none"></div>
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Top Bar: Slide Index and Autoplay Status */}
+                  <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10 pointer-events-none">
+                    <span className="backdrop-blur-md bg-black/45 text-white font-mono text-[9px] px-3 py-1 rounded-full font-bold tracking-wider border border-white/10 shadow-md">
+                      ARCHIVE {activeSlide + 1} / {galleryItems.length}
+                    </span>
+                    
+                    {galleryItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsAutoplayActive(!isAutoplayActive);
+                        }}
+                        className="pointer-events-auto backdrop-blur-md bg-black/45 hover:bg-black/60 text-white rounded-full p-2 border border-white/10 transition-all duration-200 active:scale-95 cursor-pointer shadow-md"
+                        title={isAutoplayActive ? "Pause Slideshow" : "Start Slideshow"}
+                      >
+                        {isAutoplayActive ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                      </button>
+                    )}
                   </div>
-                  <div className="p-4 flex-grow flex items-start gap-2.5 bg-white">
-                    <span className="w-1.5 h-1.5 bg-[#3B82F6] rounded-full mt-2 shrink-0"></span>
-                    <p className="text-xs text-slate-700 font-medium leading-relaxed font-sans">
-                      {item.caption}
-                    </p>
+
+                  {/* Middle Left/Right Floating Glass Controls (Only if multiple items) */}
+                  {galleryItems.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveSlide((prev) => (prev - 1 + galleryItems.length) % galleryItems.length);
+                        }}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full backdrop-blur-md bg-white/15 hover:bg-white text-white hover:text-slate-900 flex items-center justify-center border border-white/15 hover:border-white shadow-xl opacity-0 group-hover/slider:opacity-100 transition-all duration-300 transform -translate-x-1 group-hover/slider:translate-x-0 cursor-pointer"
+                        aria-label="Previous slide"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveSlide((prev) => (prev + 1) % galleryItems.length);
+                        }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full backdrop-blur-md bg-white/15 hover:bg-white text-white hover:text-slate-900 flex items-center justify-center border border-white/15 hover:border-white shadow-xl opacity-0 group-hover/slider:opacity-100 transition-all duration-300 transform translate-x-1 group-hover/slider:translate-x-0 cursor-pointer"
+                        aria-label="Next slide"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Caption & Expand CTA Overlay */}
+                  <div className="absolute bottom-6 left-6 right-6 z-10 flex flex-col md:flex-row md:items-end justify-between gap-4 pointer-events-none">
+                    <div className="max-w-xl">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+                        <span className="text-[8px] font-bold text-blue-400 tracking-wider uppercase font-sans">Highlight Photo</span>
+                      </div>
+                      <h4 className="text-xs sm:text-sm md:text-base font-bold text-white leading-normal drop-shadow-md font-sans">
+                        {galleryItems[activeSlide].caption}
+                      </h4>
+                    </div>
+
+                    <button 
+                      type="button"
+                      className="pointer-events-auto self-start md:self-end backdrop-blur-md bg-blue-600/75 hover:bg-blue-600 text-white font-sans text-[9px] uppercase font-bold tracking-widest px-3.5 py-2 rounded-xl border border-blue-400/20 shadow-lg group/btn hover:scale-102 active:scale-97 transition-all flex items-center gap-1.5 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedGalleryItem(galleryItems[activeSlide]);
+                      }}
+                    >
+                      <Maximize2 className="w-3 h-3 text-blue-100 group-hover/btn:rotate-90 duration-300" />
+                      <span>zoom / popup</span>
+                    </button>
                   </div>
                 </div>
-              ))}
+
+                {/* Bottom Pagination indicators (Only if multiple items) */}
+                {galleryItems.length > 1 && (
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center space-x-1.5">
+                    {galleryItems.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveSlide(idx);
+                        }}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                          idx === activeSlide ? 'w-5 bg-blue-500' : 'w-1.5 bg-slate-500 hover:bg-slate-400'
+                        }`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Slider Thumbnails Strip - Quick Navigation */}
+              {galleryItems.length > 1 && (
+                <div className="max-w-3xl mx-auto">
+                  <p className="text-[9px] text-center font-bold text-slate-400 uppercase tracking-widest mb-3 select-none">
+                    Jump directly to scene
+                  </p>
+                  <div className="flex items-center justify-center gap-2 overflow-x-auto py-1 scrollbar-none px-4 select-none">
+                    {galleryItems.map((item, index) => {
+                      const isActive = index === activeSlide;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveSlide(index);
+                          }}
+                          className={`w-14 h-10 md:w-16 md:h-12 rounded-lg overflow-hidden cursor-pointer border-2 transition-all shrink-0 duration-350 relative ${
+                            isActive 
+                              ? 'border-blue-600 scale-105 shadow-md shadow-blue-500/10 brightness-100' 
+                              : 'border-slate-200 brightness-[0.6] hover:brightness-[0.8] hover:border-slate-350'
+                          }`}
+                        >
+                          <img 
+                            src={item.imageUrl} 
+                            alt={item.caption}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </section>
+
+      {/* Immersive Lightbox Modal Container */}
+      <AnimatePresence>
+        {selectedGalleryItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="fixed inset-0 z-[120] flex flex-col items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md select-none"
+            onClick={() => setSelectedGalleryItem(null)}
+          >
+            {/* Close floating button */}
+            <button
+              type="button"
+              onClick={() => setSelectedGalleryItem(null)}
+              className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 active:scale-95 flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Immersive navigation elements within popup */}
+            {galleryItems.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const currentIndex = galleryItems.findIndex(item => item.id === selectedGalleryItem.id);
+                    if (currentIndex !== -1) {
+                      const prevIndex = (currentIndex - 1 + galleryItems.length) % galleryItems.length;
+                      setSelectedGalleryItem(galleryItems[prevIndex]);
+                    }
+                  }}
+                  className="absolute left-2 md:left-6 w-11 h-11 rounded-full bg-white/5 hover:bg-white/15 text-white flex items-center justify-center border border-white/10 active:scale-95 transition-all shadow-2xl cursor-pointer"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const currentIndex = galleryItems.findIndex(item => item.id === selectedGalleryItem.id);
+                    if (currentIndex !== -1) {
+                      const nextIndex = (currentIndex + 1) % galleryItems.length;
+                      setSelectedGalleryItem(galleryItems[nextIndex]);
+                    }
+                  }}
+                  className="absolute right-2 md:right-6 w-11 h-11 rounded-full bg-white/5 hover:bg-white/15 text-white flex items-center justify-center border border-white/10 active:scale-95 transition-all shadow-2xl cursor-pointer"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
+
+            {/* Middle Image viewport with scale up entrance */}
+            <motion.div
+              initial={{ scale: 0.96, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 10 }}
+              transition={{ type: "spring", damping: 26, stiffness: 190 }}
+              className="relative max-w-3xl max-h-[75vh] md:max-h-[82vh] flex flex-col items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={selectedGalleryItem.imageUrl}
+                alt={selectedGalleryItem.caption}
+                referrerPolicy="no-referrer"
+                className="max-h-[62vh] md:max-h-[72vh] w-auto max-w-[94vw] md:max-w-2xl object-contain rounded-2xl shadow-2xl border border-white/10"
+              />
+
+              {/* Caption Banner Bar */}
+              <div className="bg-black/60 backdrop-blur-md px-5 py-3.5 rounded-xl text-center border border-white/10 shadow-2xl mt-4 max-w-[94vw]">
+                <p className="text-white text-xs sm:text-sm font-medium leading-relaxed font-sans">
+                  {selectedGalleryItem.caption}
+                </p>
+                {galleryItems.length > 1 && (
+                  <p className="text-[9px] text-slate-400 font-mono mt-1 select-none">
+                    Photo {galleryItems.findIndex(i => i.id === selectedGalleryItem.id) + 1} of {galleryItems.length} • Use Left/Right Arrow Keys to browse
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 4.6 Library Officers Directory - Fully Responsive Card with Communications */}
       <section className="bg-white py-16" id="home-librarians-section">

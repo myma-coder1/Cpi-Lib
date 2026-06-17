@@ -15,6 +15,7 @@ import {
 import { Book, Student, BorrowRecord, Fine, Notification, Librarian, GalleryItem, LibraryStatus } from './types.js';
 import { readFileSync } from 'fs';
 import path from 'path';
+import { generate50EBooks } from './server_db.js';
 
 // Read config safely
 const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
@@ -103,6 +104,7 @@ export async function seedDatabaseIfEmpty(
   try {
     const book1Snap = await getDoc(doc(db, 'books', 'book-1'));
     const banglaDocSnap = await getDoc(doc(db, 'books', 'bangla-1'));
+    const ebookSeed1Snap = await getDoc(doc(db, 'books', 'ebook-seed-1'));
     
     let needsBookSeeding = false;
     if (!book1Snap.exists() || !banglaDocSnap.exists()) {
@@ -128,6 +130,25 @@ export async function seedDatabaseIfEmpty(
       }
     } else {
       console.log('Firebase books collection is already seeded with up-to-date real books.');
+    }
+
+    // Explicit check to guarantee 50 online E-Books are present even if physical books are already seeded
+    if (!ebookSeed1Snap.exists()) {
+      console.log('Firebase Database 50 digital E-Books are missing. Seeding now...');
+      const ebooks = generate50EBooks();
+      console.log(`Loading ${ebooks.length} E-Books for Firestore seeding...`);
+      for (let i = 0; i < ebooks.length; i += 400) {
+        const batch = writeBatch(db);
+        const chunk = ebooks.slice(i, i + 400);
+        chunk.forEach(book => {
+          const bookRef = doc(db, 'books', book.id);
+          batch.set(bookRef, sanitizeForFirestore(book));
+        });
+        await batch.commit();
+        console.log(`Seeded E-Books chunk: ${i} to ${i + chunk.length}`);
+      }
+    } else {
+      console.log('Firebase books collection already contains up-to-date online E-Books.');
     }
 
     // Check if new student database has been loaded
