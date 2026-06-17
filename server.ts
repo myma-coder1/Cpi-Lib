@@ -3,6 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { generate1000Books, generate400Students } from './src/server_db.js';
+import { SupportMessage } from './src/types.js';
+import { GoogleGenAI } from '@google/genai';
 import {
   seedDatabaseIfEmpty,
   getAllBooks,
@@ -39,7 +41,10 @@ import {
   saveHeroSlide,
   deleteHeroSlide,
   getBrandingConfig,
-  saveBrandingConfig
+  saveBrandingConfig,
+  getAllSupportMessages,
+  saveSupportMessage,
+  deleteSupportMessage
 } from './src/server_firebase.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -707,6 +712,9 @@ async function runServer() {
       if (req.body.registration !== undefined) {
         student.registration = req.body.registration;
       }
+      if (req.body.wishlist !== undefined) {
+        student.wishlist = Array.isArray(req.body.wishlist) ? req.body.wishlist : [];
+      }
 
       const newRoll = req.body.rollNumber ? req.body.rollNumber.toUpperCase().trim() : null;
       if (newRoll && newRoll !== oldRoll) {
@@ -1066,10 +1074,53 @@ async function runServer() {
         id: `gal-${Date.now()}`,
         imageUrl,
         caption: caption || 'Library Gallery Image',
+        title: req.body.title || caption || 'Library Gallery Image',
+        description: req.body.description || '',
+        status: 'APPROVED' as const,
+        submittedByRoll: '',
         createdAt: new Date().toISOString()
       };
       await saveGalleryItem(newItem);
       res.status(201).json(newItem);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/gallery/submit', async (req, res) => {
+    try {
+      const { imageUrl, caption, title, description, submittedByRoll } = req.body;
+      if (!imageUrl) return res.status(400).json({ error: 'Image URL is required' });
+      const newItem = {
+        id: `gal-sub-${Date.now()}`,
+        imageUrl,
+        caption: caption || title || 'Student Submission',
+        title: title || caption || 'Student Submission',
+        description: description || '',
+        status: 'PENDING' as const,
+        submittedByRoll: submittedByRoll || 'Anonymous',
+        createdAt: new Date().toISOString()
+      };
+      await saveGalleryItem(newItem);
+      res.status(201).json(newItem);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put('/api/gallery/:id/status', async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status || !['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+      }
+      const items = await getAllGalleryItems();
+      const found = items.find(item => item.id === req.params.id);
+      if (!found) return res.status(404).json({ error: 'Gallery item not found' });
+      
+      found.status = status;
+      await saveGalleryItem(found);
+      res.json({ message: `Status updated to ${status} successfully`, item: found });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -1269,6 +1320,281 @@ async function runServer() {
 
       await saveBrandingConfig(updated);
       res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+
+  // ==========================================
+  // PREMIUM AI ASSISTANT & CONTACT SUPPORT BACKEND
+  // ==========================================
+  
+  // Initialize server-side Gemini client
+  const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build'
+      }
+    }
+  });
+
+  // Robust chat generation helper with retries and fallback
+  async function generateContentWithRetry(
+    client: GoogleGenAI, 
+    payload: { model: string; contents: any; config: any }
+  ) {
+    const modelsToTry = [payload.model, 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    const maxRetries = 1;
+    const baseDelayMs = 400;
+
+    for (const model of modelsToTry) {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`[AI Support] Attempting Gemini query with model: ${model} (attempt ${attempt + 1}/${maxRetries + 1})`);
+          const response = await client.models.generateContent({
+            model: model,
+            contents: payload.contents,
+            config: payload.config
+          });
+          if (response && response.text) {
+            console.log(`[AI Support] Successfully generated response utilizing model: ${model}`);
+            return response;
+          }
+        } catch (err: any) {
+          console.error(`[AI Support] Error on model ${model}, attempt ${attempt + 1}:`, err.message || err);
+          const errStr = String(err.message || '').toLowerCase() + ' ' + String(JSON.stringify(err)).toLowerCase();
+          const isTransient = err.status === 503 || 
+                              err.statusCode === 503 || 
+                              errStr.includes('503') || 
+                              errStr.includes('temp') || 
+                              errStr.includes('demand') || 
+                              errStr.includes('unavailable') ||
+                              errStr.includes('overloaded');
+          
+          if (attempt < maxRetries && isTransient) {
+            const delay = baseDelayMs * Math.pow(2, attempt);
+            console.log(`[AI Support] Transient overload detected. Retrying model ${model} in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            console.log(`[AI Support] Aborting retries for model: ${model}. Progressing to alternative if available.`);
+            break;
+          }
+        }
+      }
+    }
+    throw new Error("All model fallback chains and exponential backoff retries failed under currently high demand.");
+  }
+
+  // AI assistant chat query endpoint
+  app.post('/api/support/chat', async (req, res) => {
+    try {
+      const { message, history } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+
+      // Load systems metadata for precise AI response grounding
+      const books = await getAllBooks();
+      const librarians = await getAllLibrarians();
+      const branding = await getBrandingConfig();
+      const libraryStatus = await getLibraryStatus();
+
+      const totalBooks = books.length;
+      const totalEbooks = books.filter(b => b.format === 'E-Book').length;
+      const availableCopiesTotal = books.reduce((acc, b) => acc + (b.availableCopies || 0), 0);
+
+      // Simple keyword match extraction to filter relevant book entries from 1000-book catalog
+      const msgWords = message.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+      const matchedBooks = books.filter(b => {
+        return msgWords.some((w: string) => 
+          b.title.toLowerCase().includes(w) || 
+          b.author.toLowerCase().includes(w) ||
+          b.category.toLowerCase().includes(w)
+        );
+      });
+
+      const matchedBooksContext = matchedBooks.length > 0
+        ? matchedBooks.slice(0, 15).map(b => `- "${b.title}" by ${b.author} (Format: ${b.format}, Available Copies: ${b.availableCopies}/${b.copiesCount}, Category: ${b.category}, Location: ${b.location || 'Main Shelf'})`).join('\n')
+        : "(কোনো নির্দিষ্ট বই কীওয়ার্ডের সাথে মিলছে না, শিক্ষার্থীদের সাধারণভাবে বই সার্চ করার পরামর্শ দিন)";
+
+      const systemInstruction = `You are "ScholarBot", the smart, modern AI Support Assistant for ${branding.libraryName} (${branding.shortName}).
+Your sole purpose is to help students, library members, and guest users instantly retrieve accurate information about our library's status, facilities, books, and policies.
+
+Language Guidelines:
+- If the user writes or queries in Bengali, respond in elegant, warm, human-crafted Bengali (বাংলা).
+- If the user writes in standard English, reply matches in English.
+- If the user writes in "Banglish" (Bengali words in Latin alphabet, e.g., "bhai boi kemne nibo?"), reply in warm Bengali or natural Latin-Bengali that is highly helpful and premium.
+- Always be concise, structurally clean with Markdown, and paired with friendly formatting.
+
+Real-Time Instutiton Context:
+- Institution Name: ${branding.libraryName} (${branding.shortName})
+- Full Mailing Address: ${branding.address}
+- Contact Email address: ${branding.email}
+- Contact Phone helpdesk line: ${branding.phone}
+- Main Web portal URL: ${branding.websiteUrl}
+
+Current Operational Hours & Schedule:
+- The library is currently OPEN ${libraryStatus.openingTime} to ${libraryStatus.closingTime} (${libraryStatus.weeklySchedule}). Closed on official holidays and Fridays.
+
+General Catalog Scale Stats:
+- We house a total catalog of ${totalBooks} fine literary and academic books.
+- Out of these, we offer ${totalEbooks} immersive fully digital E-Books that students can open and read online in their browser.
+- Right now, there are ${availableCopiesTotal} available physical copies for instant offline borrow requests across all shelves.
+
+Librarian Staff on Duty (Librarian Information):
+${librarians.map((l, index) => `${index + 1}. ${l.name} - Shift: ${l.shift} | Contact/Mobile: ${l.mobile} | Base Address: ${l.address}`).join('\n')}
+
+Borrowing, Renewal, Return, & E-Book Reading Policy Rules:
+1. **How to Borrow Physical Copies (কীভাবে বই ধার নিবেন)**: Browse our book catalogs, select your book, and click on the "Request Borrow" (টার্ম বা সময়সূচি) button, choose borrowing period (7, 14, or 30 days) and submit the request. Admin or librarian will review and approve. After approval, pick up physical book within 24 hours at the Library Counter!
+2. **Standard Borrow Limit**: Maximum 15 days of standard borrowing per approved transaction.
+3. **Overdue Penalty Fines**: Delayed books after their due date are charged BDT 5 per day as Overdue fine. Fines must be paid at the main cash counter to restore active profile credentials.
+4. **How to Renew Borrows (রিনিউ করার নিয়ম)**: Go to your Student Dashboard under the "Lending History / Borrow Records" tab and submit a Renewal Entry request.
+5. **How to Read / Download E-Books (ই-বুক পড়ার নিয়ম)**: Our portal features an in-browser immersive reader. No download required! Search any E-book, click the "পড়ুন (Read)" button, and start reading immediately. No physical checkouts are needed.
+
+Fuzzy Book keyword results from current search catalog space:
+${matchedBooksContext}
+
+Rules & FAQs instructions:
+- If a user asks "Padma Nodir Majhi ache?" provide: "হ্যাঁ, Padma Nodir Majhi বর্তমানে লাইব্রেরিতে উপলব্ধ। Available Copies: [exact matched number shown or 5]".
+- If a user asks "Library te mot koyta boi ache?" tell them the exact total books count (${totalBooks}).
+- If a user asks "Librarian er number dao", show the full details of all active librarians: names, shifts, and phone numbers.
+- Never mention internal database types, IDs, or raw JSON fields. Respond with high production-quality formatting.
+`;
+
+      const contents = [];
+      if (history && Array.isArray(history)) {
+        history.slice(-8).forEach((h: any) => {
+          contents.push({
+            role: h.role === 'user' ? 'user' : 'model',
+            parts: [{ text: h.text }]
+          });
+        });
+      }
+      contents.push({
+        role: 'user',
+        parts: [{ text: message }]
+      });
+
+      const response = await generateContentWithRetry(ai, {
+        model: 'gemini-3.5-flash',
+        contents,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+        }
+      });
+
+      res.json({ text: response.text });
+    } catch (err: any) {
+      console.error("Gemini AI Chat error:", err);
+      res.status(500).json({ error: "AI সহকারী বর্তমানে মাত্রাতিরিক্ত ট্রাফিকের মুখোমুখি হচ্ছে। অনুগ্রহ করে কয়েক সেকেন্ড পরে আবার বার্তাটি পাঠান।" });
+    }
+  });
+
+  // Support message submission endpoint
+  app.post('/api/support/messages', async (req, res) => {
+    try {
+      const { name, email, rollNumber, registration, department, semester, subject, message } = req.body;
+      if (!name || !email || !message) {
+        return res.status(400).json({ error: 'Name, Email, and Message are required!' });
+      }
+
+      const newMsg: SupportMessage = {
+        id: `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+        name,
+        email,
+        rollNumber: rollNumber || '',
+        registration: registration || '',
+        department: department || '',
+        semester: semester ? Number(semester) : undefined,
+        subject: subject || 'Support Request / Inquiry',
+        message,
+        createdAt: new Date().toISOString(),
+        status: 'PENDING'
+      };
+
+      await saveSupportMessage(newMsg);
+      res.status(201).json({ success: true, message: 'আপনার বার্তাটি সফলভাবে লাইব্রেরিয়ানের কাছে পাঠানো হয়েছে!', data: newMsg });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get all support messages
+  app.get('/api/support/messages', async (req, res) => {
+    try {
+      const messages = await getAllSupportMessages();
+      res.json(messages || []);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Admin action: read
+  app.post('/api/support/messages/:id/read', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const messages = await getAllSupportMessages();
+      const target = messages.find(m => m.id === id);
+      if (!target) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+      target.status = 'READ';
+      await saveSupportMessage(target);
+      res.json(target);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Admin action: reply
+  app.post('/api/support/messages/:id/reply', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { replyText } = req.body;
+      if (!replyText) {
+        return res.status(400).json({ error: 'Reply text is required' });
+      }
+      const messages = await getAllSupportMessages();
+      const target = messages.find(m => m.id === id);
+      if (!target) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+      target.status = 'REPLIED';
+      target.replyText = replyText;
+      target.repliedAt = new Date().toISOString();
+      await saveSupportMessage(target);
+      res.json(target);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Admin action: archive
+  app.post('/api/support/messages/:id/archive', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const messages = await getAllSupportMessages();
+      const target = messages.find(m => m.id === id);
+      if (!target) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+      target.status = 'ARCHIVED';
+      await saveSupportMessage(target);
+      res.json(target);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Admin action: delete
+  app.delete('/api/support/messages/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await deleteSupportMessage(id);
+      res.json({ success: true, message: 'Message deleted successfully' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

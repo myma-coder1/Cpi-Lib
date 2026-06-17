@@ -14,6 +14,7 @@ interface BookDetailViewProps {
   setSelectedBookId: (id: string) => void;
   user: any;
   requestBorrow: (bookId: string, durationDays: number) => Promise<string>;
+  onUpdateUser?: (updated: any) => void;
 }
 
 export default function BookDetailView({
@@ -22,7 +23,8 @@ export default function BookDetailView({
   setCurrentView,
   setSelectedBookId,
   user,
-  requestBorrow
+  requestBorrow,
+  onUpdateUser
 }: BookDetailViewProps) {
   const [showBorrowModal, setShowBorrowModal] = useState(false);
   const [borrowDuration, setBorrowDuration] = useState<number>(14); // 7, 14, 30 days
@@ -109,7 +111,7 @@ export default function BookDetailView({
     }
   };
 
-  const handleSaveForLater = () => {
+  const handleSaveForLater = async () => {
     try {
       const storedWishlist = localStorage.getItem('scholarlib_wishlist');
       let wishlist = storedWishlist ? JSON.parse(storedWishlist) : [];
@@ -119,6 +121,24 @@ export default function BookDetailView({
       }
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
+
+      if (user && user.rollNumber && onUpdateUser) {
+        try {
+          const res = await fetch(`/api/students/${user.rollNumber}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wishlist })
+          });
+          if (res.ok) {
+            const resData = await res.json();
+            if (resData.student) {
+              onUpdateUser(resData.student);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to sync book bookmark with database", err);
+        }
+      }
     } catch (e) {
       console.error(e);
     }

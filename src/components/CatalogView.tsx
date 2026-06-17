@@ -14,6 +14,8 @@ interface CatalogViewProps {
   setSearchQuery: (query: string) => void;
   setSelectedBookId: (id: string) => void;
   setCurrentView: (view: string) => void;
+  user?: any;
+  onUpdateUser?: (updated: any) => void;
 }
 
 export default function CatalogView({
@@ -23,7 +25,9 @@ export default function CatalogView({
   searchQuery,
   setSearchQuery,
   setSelectedBookId,
-  setCurrentView
+  setCurrentView,
+  user,
+  onUpdateUser
 }: CatalogViewProps) {
   // --- CORE STATES ---
   const [localSearchText, setLocalSearchText] = useState(searchQuery || '');
@@ -53,21 +57,27 @@ export default function CatalogView({
 
   const suggestionRef = useRef<HTMLDivElement>(null);
 
-  // Load wishlist & search history from localStorage
+  // Load wishlist & search history from localStorage or user profile
   useEffect(() => {
     try {
       const storedHistory = localStorage.getItem('scholarlib_recent_searches');
       if (storedHistory) {
         setRecentSearches(JSON.parse(storedHistory));
       }
-      const storedWishlist = localStorage.getItem('scholarlib_wishlist');
-      if (storedWishlist) {
-        setWishlist(JSON.parse(storedWishlist));
+      
+      if (user && Array.isArray(user.wishlist)) {
+        setWishlist(user.wishlist);
+        localStorage.setItem('scholarlib_wishlist', JSON.stringify(user.wishlist));
+      } else {
+        const storedWishlist = localStorage.getItem('scholarlib_wishlist');
+        if (storedWishlist) {
+          setWishlist(JSON.parse(storedWishlist));
+        }
       }
     } catch (e) {
       console.error("Failed to load local storage lists", e);
     }
-  }, []);
+  }, [user]);
 
   // Sync outside searchQuery with local input
   useEffect(() => {
@@ -327,7 +337,7 @@ export default function CatalogView({
   };
 
   // Toggle wishlist Bookmark
-  const toggleWishlist = (bookId: string, e: React.MouseEvent) => {
+  const toggleWishlist = async (bookId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     let updated: string[];
     if (wishlist.includes(bookId)) {
@@ -337,6 +347,24 @@ export default function CatalogView({
     }
     setWishlist(updated);
     localStorage.setItem('scholarlib_wishlist', JSON.stringify(updated));
+
+    if (user && user.rollNumber && onUpdateUser) {
+      try {
+        const res = await fetch(`/api/students/${user.rollNumber}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wishlist: updated })
+        });
+        if (res.ok) {
+          const resData = await res.json();
+          if (resData.student) {
+            onUpdateUser(resData.student);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync wishlist with database", err);
+      }
+    }
   };
 
   // Reset all filters easily

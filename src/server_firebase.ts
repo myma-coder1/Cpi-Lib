@@ -12,7 +12,7 @@ import {
   limit,
   getDocFromServer
 } from 'firebase/firestore';
-import { Book, Student, BorrowRecord, Fine, Notification, Librarian, GalleryItem, LibraryStatus } from './types.js';
+import { Book, Student, BorrowRecord, Fine, Notification, Librarian, GalleryItem, LibraryStatus, BrandingConfig, SupportMessage } from './types.js';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { generate50EBooks } from './server_db.js';
@@ -886,6 +886,42 @@ export async function saveBrandingConfig(config: BrandingConfig): Promise<void> 
     await setDoc(docRef, sanitizeForFirestore(config));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'branding/config');
+  }
+}
+
+// ==========================================
+// SUPPORT MESSAGES FIRESTORE HELPERS
+// ==========================================
+export async function getAllSupportMessages(): Promise<SupportMessage[]> {
+  const colRef = collection(db, 'support_messages');
+  try {
+    const snap = await getDocs(colRef);
+    const list: SupportMessage[] = [];
+    snap.forEach(docSnap => {
+      list.push(docSnap.data() as SupportMessage);
+    });
+    // Sort logic: newest message first
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'support_messages');
+  }
+}
+
+export async function saveSupportMessage(msg: SupportMessage): Promise<void> {
+  const docRef = doc(db, 'support_messages', msg.id);
+  try {
+    await setDoc(docRef, sanitizeForFirestore(msg));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `support_messages/${msg.id}`);
+  }
+}
+
+export async function deleteSupportMessage(id: string): Promise<void> {
+  const docRef = doc(db, 'support_messages', id);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `support_messages/${id}`);
   }
 }
 

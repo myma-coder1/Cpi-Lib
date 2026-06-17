@@ -34,6 +34,12 @@ export default function HomeView({
   const [statusData, setStatusData] = useState<LibraryStatus | null>(null);
   const [recentBorrows, setRecentBorrows] = useState<Book[]>([]);
 
+  // Home View Book Collection Limits for progressive loading
+  const [limitNewArrivals, setLimitNewArrivals] = useState(5);
+  const [limitTrending, setLimitTrending] = useState(5);
+  const [limitRecentlyAdded, setLimitRecentlyAdded] = useState(5);
+  const [limitRecommended, setLimitRecommended] = useState(5);
+
   // Premium Notices & Hero Slides States
   const [notices, setNotices] = useState<any[]>([]);
   const [heroSlides, setHeroSlides] = useState<any[]>([]);
@@ -68,6 +74,11 @@ export default function HomeView({
   const [activeSlide, setActiveSlide] = useState(0);
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
   const [isAutoplayActive, setIsAutoplayActive] = useState(true);
+
+  // FAQ Accordion States (প্রশ্ন ও উত্তর)
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [faqSearchQuery, setFaqSearchQuery] = useState('');
+  const [expandAllFaqs, setExpandAllFaqs] = useState(false);
 
   // Auto scroll gallery preview slides
   useEffect(() => {
@@ -186,6 +197,19 @@ export default function HomeView({
   };
 
   const bookOfMonth = books.find(b => b.title.includes("The Architecture of Information")) || books[1];
+
+  // Robust book collections for home page showcase expansion
+  const newArrivalsList = books.slice(0, 15);
+  const trendingBooksList = books.filter(b => b.format === 'E-Book' || b.category === 'Technology' || b.id.charCodeAt(0) % 2 === 0);
+  const recentlyAddedList = books.slice(5, 20);
+  const recommendedList = books.filter(b => b.category === 'Science' || b.category === 'Mathematics' || b.id.charCodeAt(0) % 2 === 1).slice(0, 12);
+
+  // Top 10 Borrowed Books Leaderboard (সর্বাধিক ধার নেওয়া বই)
+  const top10BorrowedList = books.slice(2, 12).map((book, idx) => ({
+    ...book,
+    borrowCount: 148 - idx * 11,
+    rank: idx + 1
+  }));
 
   const newArrivalNames = ["Quantum Mechanics II", "Global Economic Trends", "Urban Development", "Molecular Biology", "Digital Ethics 101"];
   const newArrivals = books.filter(b => newArrivalNames.some(name => b.title.includes(name)))
@@ -795,75 +819,310 @@ export default function HomeView({
         </div>
       </section>
 
-      {/* 3. New Arrivals Shelf Section */}
+      {/* 3. Home View Expanded Book Collections (5 Curated Shelves & Leaderboards) */}
+      
+      {/* 3.1 New Arrivals Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14" id="new-arrivals-section">
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex items-end justify-between mb-8 border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-[#1E40AF] pl-3 h-max">New Arrivals Shelf</h2>
-            <p className="text-xs text-slate-550 mt-1">Acquired textbooks and resources for the current academic session.</p>
+            <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-blue-600 pl-3 h-max">New Arrivals Shelf (নতুন বইয়ের সমাহার)</h2>
+            <p className="text-xs text-slate-500 mt-1">Acquired textbooks and research resources for the current academic session.</p>
           </div>
-          <span className="text-xs font-mono font-bold text-[#3B82F6] uppercase bg-blue-50 border border-blue-100 px-3 py-1 rounded-md">CPI-2026 Session</span>
+          <span className="text-xs font-mono font-bold text-blue-600 uppercase bg-blue-50 border border-blue-100 px-3 py-1 rounded-md">CPI-2026 Session</span>
         </div>
         
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-          {newArrivals.map((book, idx) => (
+          {newArrivalsList.slice(0, limitNewArrivals).map((book, idx) => (
             <div 
               key={book.id}
               onClick={() => viewBookDetails(book.id)}
-              className="bg-white border border-slate-250/60 hover:border-slate-300 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left max-w-[320px] mx-auto w-full"
-              id={`arrival-${book.id}`}
+              className="bg-white border border-slate-200 hover:border-blue-400 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left w-full"
             >
               <div>
-                {/* Fixed cover container with light background and contain fit */}
-                <div className="relative w-full h-[240px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
+                <div className="relative w-full h-[220px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
                   <img 
                     src={book.imageUrl} 
                     alt={book.title}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
                   />
-                  {idx === 0 && (
-                    <span className="absolute top-2.5 left-2.5 bg-[#2563eb] text-white font-sans font-semibold text-[8px] px-2.5 py-1 rounded-full uppercase tracking-wider leading-none shadow-sm">
-                      New
-                    </span>
-                  )}
+                  <span className="absolute top-2.5 left-2.5 bg-blue-600 text-white font-sans font-bold text-[8px] px-2 py-0.5 rounded uppercase tracking-wider">
+                    Arrival
+                  </span>
                 </div>
-
-                <span className="text-[10px] font-semibold text-[#2563eb] tracking-wide uppercase inline-block mb-1">
+                <span className="text-[9.5px] font-bold text-blue-650 tracking-wide uppercase inline-block mb-1">
                   {book.category}
                 </span>
-
-                <h4 className="font-sans font-semibold text-xs+ text-slate-800 line-clamp-2 leading-snug group-hover:text-[#2563eb] transition-colors">
+                <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
                   {book.title}
                 </h4>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
+                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
               </div>
-
-              {/* Rating and availability on one row */}
-              <div className="pt-3 border-t border-slate-100 mt-4.5 flex items-center justify-between text-xs text-slate-600">
-                <div className="flex items-center gap-1 select-none text-amber-500">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span className="font-semibold text-slate-700 ml-0.5">4.8</span>
-                </div>
+              <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-650">
+                <span className="text-[8.5px] font-bold text-slate-400 uppercase font-mono">{book.format}</span>
                 {book.copiesCount > 0 ? (
-                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                    Available
-                  </span>
+                  <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 rounded">Available</span>
                 ) : (
-                  <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                    Borrowed
-                  </span>
+                  <span className="text-[9px] font-extrabold text-[#F59E0B] bg-amber-50 px-2 rounded">Borrowed</span>
                 )}
               </div>
             </div>
           ))}
-          
-          {newArrivals.length === 0 && (
-            <div className="col-span-5 text-center text-xs text-slate-405 py-12 bg-white card-premium">
-              Populating new textbook registers...
+        </div>
+        {newArrivalsList.length > limitNewArrivals && (
+          <div className="mt-8 text-center">
+            <button 
+              onClick={() => setLimitNewArrivals(prev => prev + 5)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px] uppercase tracking-wider px-6 py-2.5 rounded-xl cursor-pointer transition-colors"
+            >
+              আরো দেখুন (Load More Acquisitions)
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* 3.2 Top Borrowed Books Leaderboard Section */}
+      <section className="bg-gradient-to-b from-slate-50 to-white border-y border-slate-200/60 py-16 text-left font-sans" id="leaderboard-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mb-12">
+            <span className="text-[#1E40AF] font-bold text-[10px] uppercase tracking-widest bg-blue-50 border border-blue-100 px-3 py-1 rounded-full">
+              জনপ্রিয়তার তুলনামূলক তালিকা (Monthly Leaderboard)
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-3">
+              সর্বাধিক ধার নেওয়া বই (Top 10 Borrowed Reads)
+            </h2>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">চলতি মাসের লাইব্রেরি রেকর্ড অনুযায়ী শিক্ষার্থীদের মাঝে সবচেয়ে বেশি প্রচারিত ও পঠিত শীর্ষ ১০ টি অ্যাকাডেমিক টেক্সটবই।</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {top10BorrowedList.map((book, idx) => (
+              <div 
+                key={book.id}
+                onClick={() => viewBookDetails(book.id)}
+                className="bg-white border border-slate-200 rounded-[20px] p-4 flex flex-col justify-between group hover:shadow-lg hover:border-blue-400 transition-all duration-300 cursor-pointer relative overflow-hidden"
+              >
+                {/* Floating Rank Badge */}
+                <div className={`absolute top-0 right-0 w-12 h-12 flex items-center justify-center font-mono font-black text-sm rounded-bl-3xl ${idx < 3 ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xs' : 'bg-slate-100 text-slate-600'}`}>
+                  {idx + 1 < 10 ? `0${idx + 1}` : idx + 1}
+                </div>
+
+                <div>
+                  {/* Thumbnail Cover */}
+                  <div className="aspect-[4/5] bg-slate-50 rounded-xl mb-4 overflow-hidden relative border border-slate-100 flex items-center justify-center p-2 select-none">
+                    <img 
+                      src={book.imageUrl} 
+                      alt={book.title} 
+                      referrerPolicy="no-referrer"
+                      className="h-[150px] object-contain group-hover:scale-105 transition-transform duration-300"
+                      onError={e => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200';
+                      }}
+                    />
+                  </div>
+
+                  <span className="text-[8.5px] font-mono font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    ★ Monthly Rank #{idx + 1}
+                  </span>
+
+                  <h4 className="font-bold text-slate-900 text-xs mt-3 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    {book.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">By {book.author}</p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-1 text-slate-650 font-medium">
+                    <span className="text-blue-600 font-extrabold font-mono">{book.borrowCount}</span>
+                    <span>Borrows</span>
+                  </div>
+                  <span className="text-[8px] text-slate-400 font-bold uppercase font-mono">{book.format}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3.3 Trending Books Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-left" id="trending-books-section">
+        <div className="flex items-end justify-between mb-8 border-b border-slate-100 pb-4">
+          <div>
+            <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-emerald-500 pl-3 h-max">Trending Books (জনপ্রিয় বইসমূহ)</h2>
+            <p className="text-xs text-slate-500 mt-1">Highlighted and widely discussed STEM and humanities studies.</p>
+          </div>
+          <span className="text-xs font-mono font-bold text-emerald-600 uppercase bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-md">Live read rate</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+          {trendingBooksList.slice(0, limitTrending).map((book, idx) => (
+            <div 
+              key={book.id}
+              onClick={() => viewBookDetails(book.id)}
+              className="bg-white border border-slate-200 hover:border-emerald-400 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left w-full"
+            >
+              <div>
+                <div className="relative w-full h-[220px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
+                  <img 
+                    src={book.imageUrl} 
+                    alt={book.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                  />
+                  <span className="absolute top-2.5 right-2.5 bg-emerald-600 text-white font-sans font-bold text-[8px] px-2 py-0.5 rounded uppercase tracking-wider">
+                    98% Match
+                  </span>
+                </div>
+                <span className="text-[9.5px] font-bold text-emerald-650 tracking-wide uppercase inline-block mb-1">
+                  {book.category}
+                </span>
+                <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-emerald-600 transition-colors">
+                  {book.title}
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
+              </div>
+              <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-650">
+                <span className="text-[8.5px] font-bold text-slate-400 uppercase font-mono">{book.format}</span>
+                {book.copiesCount > 0 ? (
+                  <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 rounded">Active</span>
+                ) : (
+                  <span className="text-[9px] font-extrabold text-[#F59E0B] bg-amber-50 px-2 rounded">Reserved</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        {trendingBooksList.length > limitTrending && (
+          <div className="mt-8 text-center">
+            <button 
+              onClick={() => setLimitTrending(prev => prev + 5)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px] uppercase tracking-wider px-6 py-2.5 rounded-xl cursor-pointer transition-colors"
+            >
+              আরো দেখুন (Load More Trending)
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* 3.4 Recently Added Section */}
+      <section className="bg-slate-50/50 py-16 text-left border-y border-slate-200/60" id="recently-added-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-purple-500 pl-3 h-max">Recently Added (সদ্য যুক্ত বই)</h2>
+              <p className="text-xs text-slate-500 mt-1">Academic resources and publications registered into catalog during the past 30 days.</p>
+            </div>
+            <span className="text-xs font-mono font-bold text-purple-650 bg-purple-50 border border-purple-100 px-3 py-1 rounded-md">Catalog Sync</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+            {recentlyAddedList.slice(0, limitRecentlyAdded).map((book, idx) => (
+              <div 
+                key={book.id}
+                onClick={() => viewBookDetails(book.id)}
+                className="bg-white border border-slate-200 hover:border-purple-400 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left w-full"
+              >
+                <div>
+                  <div className="relative w-full h-[220px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
+                    <img 
+                      src={book.imageUrl} 
+                      alt={book.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                    />
+                    <span className="absolute top-2.5 right-2.5 bg-purple-600 text-white font-sans font-bold text-[8px] px-2 py-0.5 rounded uppercase tracking-wider">
+                      Added
+                    </span>
+                  </div>
+                  <span className="text-[9.5px] font-bold text-purple-650 tracking-wide uppercase inline-block mb-1">
+                    {book.category}
+                  </span>
+                  <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-purple-600 transition-colors">
+                    {book.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
+                </div>
+                <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-655">
+                  <span className="text-[8.5px] font-bold text-slate-400 uppercase font-mono">{book.format}</span>
+                  {book.copiesCount > 0 ? (
+                    <span className="text-[9px] font-extrabold text-purple-700 bg-purple-50 px-2 rounded">New</span>
+                  ) : (
+                    <span className="text-[9px] font-extrabold text-slate-400 bg-slate-105 px-2 rounded">Hold</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          {recentlyAddedList.length > limitRecentlyAdded && (
+            <div className="mt-8 text-center">
+              <button 
+                onClick={() => setLimitRecentlyAdded(prev => prev + 5)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px] uppercase tracking-wider px-6 py-2.5 rounded-xl cursor-pointer transition-colors"
+              >
+                আরো দেখুন (Load More Cataloged)
+              </button>
             </div>
           )}
         </div>
+      </section>
+
+      {/* 3.5 Recommended Reads Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-left" id="recommended-reads-section">
+        <div className="flex items-end justify-between mb-8 border-b border-slate-100 pb-4">
+          <div>
+            <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-indigo-600 pl-3 h-max">Recommended Reads (প্রস্তাবিত বইসমূহ)</h2>
+            <p className="text-xs text-slate-500 mt-1">Curated academic studies and publications manually selected by department advisors.</p>
+          </div>
+          <span className="text-xs font-mono font-bold text-indigo-650 uppercase bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-md">Advisors choice</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+          {recommendedList.slice(0, limitRecommended).map((book, idx) => (
+            <div 
+              key={book.id}
+              onClick={() => viewBookDetails(book.id)}
+              className="bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left w-full"
+            >
+              <div>
+                <div className="relative w-full h-[220px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
+                  <img 
+                    src={book.imageUrl} 
+                    alt={book.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                  />
+                  <span className="absolute top-2.5 right-2.5 bg-indigo-600 text-white font-sans font-bold text-[8px] px-2 py-0.5 rounded uppercase tracking-wider">
+                    Excellent Choice
+                  </span>
+                </div>
+                <span className="text-[9.5px] font-bold text-indigo-650 tracking-wide uppercase inline-block mb-1">
+                  {book.category}
+                </span>
+                <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
+                  {book.title}
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
+              </div>
+              <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-650">
+                <span className="text-[8.5px] font-bold text-slate-400 uppercase font-mono">{book.format}</span>
+                {book.copiesCount > 0 ? (
+                  <span className="text-[9px] font-extrabold text-indigo-700 bg-indigo-50 px-2 rounded">Curated</span>
+                ) : (
+                  <span className="text-[9px] font-extrabold text-[#F59E0B] bg-amber-50 px-2 rounded">Check shelf</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        {recommendedList.length > limitRecommended && (
+          <div className="mt-8 text-center">
+            <button 
+              onClick={() => setLimitRecommended(prev => prev + 5)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px] uppercase tracking-wider px-6 py-2.5 rounded-xl cursor-pointer transition-colors"
+            >
+              আরো দেখুন (Load More Curations)
+            </button>
+          </div>
+        )}
       </section>
 
       {/* 4. Verified Review Testimonials - Modern Realistic Cards */}
@@ -1319,6 +1578,139 @@ export default function HomeView({
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* 4.8 FAQ / Q&A Section (প্রশ্ন ও উত্তর) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-left" id="faq-section">
+        <div className="border border-slate-205 bg-white rounded-3xl p-6 sm:p-10 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 pb-6 border-b border-slate-100">
+            <div>
+              <span className="text-[#1E40AF] font-bold text-[10px] uppercase tracking-widest bg-blue-50 border border-blue-100 px-3 py-1 rounded-full font-mono">
+                জিজ্ঞাসিত প্রশ্নাবলী (Common Library Q&A)
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-3 font-sans">
+                প্রশ্ন ও উত্তর (FAQ Section)
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">লাইব্রেরি ব্যবহার পদ্ধতি, বই সংরক্ষণ ও জরিমানা সংক্রান্ত সাধারণ বিষয়সমূহ জেনে নিন।</p>
+            </div>
+
+            {/* Expand / Collapse All & Search */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Search input with search icon */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text"
+                  placeholder="প্রশ্ন খুঁজুন..."
+                  value={faqSearchQuery}
+                  onChange={e => {
+                    setFaqSearchQuery(e.target.value);
+                    if (e.target.value) {
+                      setExpandAllFaqs(true);
+                    }
+                  }}
+                  className="pl-9 pr-4 py-2 text-xs border border-slate-205 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-105 bg-slate-50/50 min-w-[200px]"
+                />
+                {faqSearchQuery && (
+                  <button 
+                    onClick={() => { setFaqSearchQuery(''); setExpandAllFaqs(false); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 font-bold text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Action toggles */}
+              <button
+                onClick={() => {
+                  setExpandAllFaqs(!expandAllFaqs);
+                  setOpenFaqIndex(null);
+                }}
+                className="bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 font-bold text-[10px] uppercase tracking-wider py-2 px-4 rounded-xl cursor-pointer transition-all whitespace-nowrap"
+              >
+                {expandAllFaqs ? "সব বন্ধ করুন (Collapse All)" : "সব খুলুন (Expand All)"}
+              </button>
+            </div>
+          </div>
+
+          {/* Accordion Questions List */}
+          <div className="space-y-3">
+            {[
+              {
+                q: "ডিজিটাল লাইব্রেরি ব্যবহারের নিয়ম কী?",
+                ans: "লাইব্রেরি ব্যবহার করতে হলে প্রতিটি শিক্ষার্থীকে অবশ্যই নিজের রোল ও রেজিস্ট্রেশন নম্বর ব্যবহার করে ডিজিটাল পোর্টালে সাইন-ইন করতে হবে। পোর্টাল থেকে যেকোনো ই-বুক সরাসরি যেকোনো সময় ব্রাউজারেই পড়া যাবে এবং ফিজিক্যাল বইয়ের ক্ষেত্রে অনলাইন বুকিং দেওয়ার পরে অনুমোদিত স্লিপ নিয়ে কাউন্টার থেকে সংগ্রহ করা যাবে।"
+              },
+              {
+                q: "কিভাবে আমি একটি বই ধার নিতে পারি?",
+                ans: "যেকোনো বইয়ের বিবরণী পৃষ্ঠায় ঢুকে 'ধার নিশ্চিত করুন' (Request Borrow Duration Layout) বাটনে ক্লিক করে মেয়াদ নির্বাচন করে রিকোয়েস্ট সাবমিট করুন। এরপর অ্যাডমিন বা লাইব্রেরিয়ান সেটি অনুমোদন করলে আপনি লাইব্রেরি কাউন্টারে গিয়ে মূল ফিজিক্যাল কপিটি সংগ্রহ করতে পারবেন।"
+              },
+              {
+                q: "বই ধার নেওয়ার সর্বোচ্চ মেয়াদ কতদিন?",
+                ans: "সাধারণ ফিজিক্যাল বইয়ের ক্ষেত্রে সর্বোচ্চ ১৫ দিন পর্যন্ত বই নিজের কাছে রাখা সম্ভব। নির্ধারিত মেয়াদ পার হওয়ার পূর্বে পোর্টালে ঢুকে পুনরায় ড্যাশবোর্ড থেকে রিনিউয়াল (Renewal Entry) রিকোয়েস্ট সাবমিট করতে হবে।"
+              },
+              {
+                q: "বই ফেরত দিতে বিলম্ব হলে কি কোনো জরিমানা আছে?",
+                ans: "হ্যাঁ, নির্ধারিত মেয়াদের পর বই ফেরত দিতে বিলম্ব হলে প্রতিদিন ৫ টাকা হারে অলস ফাইন যুক্ত হবে। অলস ফাইন অ্যাকাউন্টের ওয়ালেট লেজারে যোগ হবে যা লাইব্রেরি কাউন্টারে ম্যানুয়ালি পরিশোধ করে ক্লিয়ারেন্সের জন্য এন্ট্রি পাওয়া সম্ভব।"
+              },
+              {
+                q: "গ্যালারিতে ছবি আপলোড করার প্রক্রিয়া কী?",
+                ans: "নিবন্ধিত শিক্ষার্থীরা তাদের ড্যাশবোর্ডের 'গ্যালারি সাবমিশন' ট্যাব ব্যবহার করে যেকোনো ছবির শিরোনাম ও একটি বৈধ ছবির ইউআরএল টাইপ করে আপলোড করতে পারবেন। অ্যাডমিন এপ্রুভাল রিকোয়েস্ট থেকে সেটিকে অনুমোদন দিলেই সেটি সরাসরি হোমপেজের পাবলিক গ্যালারি শোকেসে এন্ট্রি পাবে।"
+              }
+            ]
+            .filter(item => {
+              if (!faqSearchQuery) return true;
+              return item.q.toLowerCase().includes(faqSearchQuery.toLowerCase()) || item.ans.toLowerCase().includes(faqSearchQuery.toLowerCase());
+            })
+            .map((item, index) => {
+              const isOpen = expandAllFaqs || openFaqIndex === index;
+              return (
+                <div 
+                  key={index} 
+                  className="border border-slate-205 rounded-2xl overflow-hidden bg-slate-50/20 hover:bg-slate-50/50 transition-all duration-200 text-left"
+                >
+                  <button
+                    onClick={() => {
+                      if (expandAllFaqs) setExpandAllFaqs(false);
+                      setOpenFaqIndex(openFaqIndex === index ? null : index);
+                    }}
+                    className="w-full font-sans font-bold text-slate-800 text-xs sm:text-sm p-4 sm:p-5 flex items-center justify-between text-left cursor-pointer transition-colors"
+                  >
+                    <span className="pr-4 leading-normal font-semibold text-slate-850 select-none flex items-center gap-2.5">
+                      <span className="text-[#1E40AF] font-mono select-none font-extrabold">Q{index + 1}.</span>
+                      {item.q}
+                    </span>
+                    <span className={`w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 transform transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-blue-600 bg-blue-50 border-blue-200 font-extrabold' : ''}`}>
+                      ▼
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-4 sm:px-6 pb-5 pt-0 text-xs sm:text-xs text-slate-600 leading-relaxed font-sans font-medium border-t border-slate-150 pt-4 bg-white animate-fade-in whitespace-pre-line text-left">
+                      {item.ans}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Empty Search Fallback */}
+            {[
+              {
+                q: "ডিজিটাল লাইব্রেরি ব্যবহারের নিয়ম কী?",
+                ans: "লাইব্রেরি ব্যবহার করতে হলে প্রতিটি শিক্ষার্থীকে অবশ্যই..."
+              }
+            ].filter(item => {
+              if (!faqSearchQuery) return true;
+              return item.q.toLowerCase().includes(faqSearchQuery.toLowerCase()) || item.ans.toLowerCase().includes(faqSearchQuery.toLowerCase());
+            }).length === 0 && (
+              <div className="py-12 text-center text-slate-400 font-sans border border-dashed border-slate-200 rounded-2xl">
+                <p className="text-xs font-bold text-slate-650">কোনো প্রশ্ন খুঁজে পাওয়া যায়নি!</p>
+                <p className="text-[10px] text-slate-400 mt-1">অনুগ্রহ করে অন্য শব্দ টাইপ করে সার্চ করুন।</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

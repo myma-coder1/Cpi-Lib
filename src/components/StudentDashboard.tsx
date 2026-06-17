@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Book, Clock, AlertTriangle, ShieldCheck, Heart, KeyRound, CheckSquare, Layers, AlertCircle, RefreshCw, Coins } from 'lucide-react';
-import { BorrowRecord, Fine } from '../types.js';
+import { 
+  Book, Clock, AlertTriangle, ShieldCheck, Heart, KeyRound, CheckSquare, Layers, 
+  AlertCircle, RefreshCw, Coins, Image as ImageIcon, Upload, Trash2, BookOpen, Eye 
+} from 'lucide-react';
+import { BorrowRecord, Fine, GalleryItem } from '../types.js';
 
 interface StudentDashboardProps {
   user: any;
@@ -8,6 +11,8 @@ interface StudentDashboardProps {
   setCurrentView: (view: string) => void;
   setSelectedBookId: (id: string) => void;
   logout: () => void;
+  branding?: any;
+  onUpdateUser?: (updated: any) => void;
 }
 
 export default function StudentDashboard({
@@ -15,12 +20,26 @@ export default function StudentDashboard({
   books,
   setCurrentView,
   setSelectedBookId,
-  logout
+  logout,
+  branding,
+  onUpdateUser
 }: StudentDashboardProps) {
   const [loans, setLoans] = useState<BorrowRecord[]>([]);
   const [fines, setFines] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Dashboard tab
+  const [dashboardTab, setDashboardTab] = useState<'borrows' | 'wishlist' | 'gallery'>('borrows');
+
+  // Student Gallery Submission state
+  const [myGallerySubmissions, setMyGallerySubmissions] = useState<GalleryItem[]>([]);
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [imageTitleInput, setImageTitleInput] = useState('');
+  const [imageCaptionInput, setImageCaptionInput] = useState('');
+  const [submittingImage, setSubmittingImage] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState('');
+  const [uploadError, setUploadError] = useState('');
+
   // Profile password modification state
   const [newPassword, setNewPassword] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
@@ -45,6 +64,14 @@ export default function StudentDashboard({
       const finesRes = await fetch(`/api/fines/${user.rollNumber}`);
       const finesData = await finesRes.json();
       setFines(finesData);
+
+      // Fetch user's gallery submissions
+      const galleryRes = await fetch('/api/gallery');
+      if (galleryRes.ok) {
+        const galleryData: GalleryItem[] = await galleryRes.json();
+        const userSubs = galleryData.filter(g => g.submittedByRoll?.toUpperCase() === user.rollNumber.toUpperCase());
+        setMyGallerySubmissions(userSubs);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -128,6 +155,93 @@ export default function StudentDashboard({
       }
     } catch (e) {
       setPasswordError('Error saving password.');
+    }
+  };
+
+  const handleGallerySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!imageUrlInput.trim()) {
+      setUploadError('Please specify an image URL');
+      return;
+    }
+    setSubmittingImage(true);
+    setUploadError('');
+    setUploadSuccess('');
+    try {
+      const res = await fetch('/api/gallery/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: imageUrlInput,
+          title: imageTitleInput || 'Library Showcase',
+          caption: imageCaptionInput || imageTitleInput || 'Library Exhibition photo',
+          description: imageCaptionInput,
+          submittedByRoll: user.rollNumber
+        })
+      });
+      if (res.ok) {
+        setUploadSuccess('Your photo has been uploaded successfully and sent to the administrator review queue (অপেক্ষমাণ রিভিউ তালিকা)!');
+        setImageUrlInput('');
+        setImageTitleInput('');
+        setImageCaptionInput('');
+        loadStudentRecords(); // Reload submission list
+      } else {
+        const data = await res.json();
+        setUploadError(data.error || 'Failed to submit photo');
+      }
+    } catch (err: any) {
+      setUploadError('Network error checking submissions.');
+    } finally {
+      setSubmittingImage(false);
+    }
+  };
+
+  const handleRemoveWishlist = async (bookId: string) => {
+    if (!user || !onUpdateUser) return;
+    const currentWishlist = user.wishlist || [];
+    const updated = currentWishlist.filter((id: string) => id !== bookId);
+    
+    // Update localStorage
+    localStorage.setItem('scholarlib_wishlist', JSON.stringify(updated));
+    
+    try {
+      const res = await fetch(`/api/students/${user.rollNumber}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wishlist: updated })
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        if (resData.student) {
+          onUpdateUser(resData.student);
+          alert("Book removed from wishlist!");
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleBorrowFromWishlist = async (bookId: string) => {
+    try {
+      const res = await fetch('/api/borrow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookId,
+          studentRoll: user.rollNumber,
+          durationDays: 14
+        })
+      });
+      if (res.ok) {
+        alert("Borrow request submitted successfully! You can collect the physical copy at the library circulation desk.");
+        loadStudentRecords();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to borrow book");
+      }
+    } catch (e) {
+      alert("Error submitting borrow request");
     }
   };
 
@@ -241,7 +355,44 @@ export default function StudentDashboard({
         </div>
       </div>
 
-      {/* Main grids: active actions, historical list, profile manager */}
+      {/* Premium Tab Navigation Row */}
+      <div className="flex border-b border-slate-200 mb-8 overflow-x-auto gap-2 no-scrollbar select-none">
+        <button
+          onClick={() => setDashboardTab('borrows')}
+          className={`pb-4 px-6 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            dashboardTab === 'borrows'
+              ? 'border-blue-600 text-blue-600 font-extrabold'
+              : 'border-transparent text-slate-400 hover:text-slate-650'
+          }`}
+        >
+          <CheckSquare className="w-4 h-4" />
+          চলতি বই ও খতিয়ান (Borrows & Logs)
+        </button>
+        <button
+          onClick={() => setDashboardTab('wishlist')}
+          className={`pb-4 px-6 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            dashboardTab === 'wishlist'
+              ? 'border-blue-600 text-blue-600 font-extrabold'
+              : 'border-transparent text-slate-400 hover:text-slate-650'
+          }`}
+        >
+          <Heart className="w-4 h-4 fill-current text-rose-500" />
+          পছন্দের তালিকা ({(user.wishlist || []).length}) (Wishlist)
+        </button>
+        <button
+          onClick={() => setDashboardTab('gallery')}
+          className={`pb-4 px-6 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            dashboardTab === 'gallery'
+              ? 'border-blue-600 text-blue-600 font-extrabold'
+              : 'border-transparent text-slate-400 hover:text-slate-650'
+          }`}
+        >
+          <ImageIcon className="w-4 h-4" />
+          গ্যালারি সাবমিশন (Gallery Submission)
+        </button>
+      </div>
+
+      {dashboardTab === 'borrows' && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Columns (Active borrowings & historical loans) */}
@@ -526,6 +677,253 @@ export default function StudentDashboard({
 
         </div>
       </div>
+      )}
+
+      {dashboardTab === 'wishlist' && (
+        <div className="bg-white border border-slate-200 rounded-[20px] p-5 sm:p-8 shadow-xs animate-fade-in text-left">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-3 border-b border-slate-150">
+            <div>
+              <h3 className="font-sans font-bold text-slate-900 uppercase tracking-wider text-sm flex items-center gap-2">
+                <Heart className="w-5 h-5 text-rose-500 fill-current" /> আমার পছন্দের বইয়ের তালিকা (My Saved Wishlist)
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 font-sans">সব মিলিয়ে {(user.wishlist || []).length} টি পছন্দ করা বই সংরক্ষিত রয়েছে যা অ্যাকাউন্টে সিঙ্কড আছে।</p>
+            </div>
+            <button 
+              onClick={() => setCurrentView('catalog')}
+              className="bg-slate-900 hover:bg-slate-805 text-white font-bold text-[10px] uppercase tracking-wider px-4 py-2 rounded-xl cursor-pointer shadow-xs transition-colors"
+            >
+              বই ক্যাটালগ খুঁজুন (Search Catalog)
+            </button>
+          </div>
+
+          {!user.wishlist || user.wishlist.length === 0 ? (
+            <div className="py-16 text-center text-slate-500">
+              <Heart className="w-12 h-12 text-slate-300 mx-auto mb-4 stroke-1 animate-pulse" />
+              <p className="font-bold text-slate-800 text-sm font-sans">আপনার পছন্দের তালিকা এখনো খালি!</p>
+              <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto font-sans leading-relaxed font-medium">বইয়ের বিবরণী পৃষ্ঠা বা ক্যাটালগ সার্চ থেকে যেকোনও বইয়ের পাশে 'পছন্দ করুন' (Heart/Save) বাটনে ক্লিক করে পছন্দসমূহ সংরক্ষণ করতে পারেন।</p>
+              <button 
+                onClick={() => setCurrentView('catalog')}
+                className="mt-6 bg-blue-50 text-[#1E40AF] hover:bg-blue-100 border border-blue-200 font-bold text-[10px] uppercase tracking-wider px-5 py-2.5 rounded-xl cursor-pointer transition-all"
+              >
+                বই সমাহার ঘুরে দেখুন (Explore Books Now)
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {books.filter(b => (user.wishlist || []).includes(b.id)).map(book => (
+                <div key={book.id} className="border border-slate-200 rounded-2xl p-4 flex flex-col justify-between bg-slate-50/50 hover:bg-white hover:shadow-md transition-all duration-200 group">
+                  <div>
+                    {/* Cover Thumbnail */}
+                    <div className="aspect-[4/5] bg-slate-100 rounded-xl mb-4 overflow-hidden relative cursor-pointer" onClick={() => { setSelectedBookId(book.id); setCurrentView('book-detail'); }}>
+                      <img 
+                        src={book.coverUrl || `https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200`} 
+                        alt={book.title} 
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200';
+                        }}
+                      />
+                      <span className="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-xs text-slate-800 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border border-slate-100 shadow-xs font-mono">
+                        {book.format}
+                      </span>
+                    </div>
+
+                    <h4 
+                      className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-xs line-clamp-1 cursor-pointer font-sans"
+                      onClick={() => { setSelectedBookId(book.id); setCurrentView('book-detail'); }}
+                    >
+                      {book.title}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-mono mt-1 line-clamp-1">{book.author}</p>
+                    <span className="inline-block bg-slate-100 border border-slate-200 text-slate-700 text-[8.5px] font-bold px-2 py-0.5 rounded-md mt-2 font-mono">
+                      {book.category}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-slate-150 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => { setSelectedBookId(book.id); setCurrentView('book-detail'); }}
+                      className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[9px] uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-colors font-sans"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Detail
+                    </button>
+                    {book.format !== 'E-Book' ? (
+                      <button
+                        onClick={() => handleBorrowFromWishlist(book.id)}
+                        className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-750 text-white font-bold text-[9px] uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" /> Borrow
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setSelectedBookId(book.id); setCurrentView('book-detail'); }}
+                        className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-750 text-white font-bold text-[9px] uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" /> E-Book
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleRemoveWishlist(book.id)}
+                      className="col-span-2 flex items-center justify-center gap-1 text-slate-400 hover:text-rose-600 font-semibold text-[9px] uppercase tracking-wider py-1 rounded-lg border border-transparent hover:border-rose-100 hover:bg-rose-50 cursor-pointer transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 shrink-0" /> Remove Book
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {dashboardTab === 'gallery' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in text-left">
+          
+          {/* Photos submission form */}
+          <div className="lg:col-span-1 bg-white border border-slate-200 rounded-[20px] p-5 sm:p-6 shadow-xs h-fit">
+            <h3 className="font-sans font-bold text-slate-900 uppercase tracking-wider mb-4 text-xs flex items-center gap-2">
+              <Upload className="w-4.5 h-4.5 text-blue-600 shrink-0" /> Submit Gallery Photo (ছবি যোগ করুন)
+            </h3>
+            <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+              লাইব্রেরির সুন্দর কোনো মুহূর্ত, কুইজ প্রতিযোগিতা বা স্টাডি সেশনের ছবি এখানে সাবমিট করুন। অ্যাডমিন রিভিউ করে এপ্রুভ করলে মূল গ্যালারিতে ছবি প্রকাশ পাবে।
+            </p>
+
+            <form onSubmit={handleGallerySubmit} className="space-y-4 font-sans">
+              <div>
+                <label className="block text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider mb-1.5 leading-none">Photo Title (ছবির শিরোনাম)</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. CPI Central Library Campus Study"
+                  value={imageTitleInput}
+                  onChange={e => setImageTitleInput(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-105 bg-slate-50/50"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider mb-1.5 leading-none">Image URL (ছবির অনলাইন লিংক/ইউআরএল)</label>
+                <div className="space-y-1.5">
+                  <input 
+                    type="url"
+                    placeholder="https://images.unsplash.com/..."
+                    value={imageUrlInput}
+                    onChange={e => setImageUrlInput(e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-105 bg-slate-50/50"
+                    required
+                  />
+                  <p className="text-[10px] text-slate-400 font-medium">Use any online image link or sample image URL to check.</p>
+                  <button 
+                    type="button"
+                    onClick={() => setImageUrlInput("https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&q=80&w=800")}
+                    className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                  >
+                    ⚡ auto-fill mock test image
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider mb-1.5 leading-none">Brief Caption (সংক্ষিপ্ত ক্যাপশন/বর্ণনা)</label>
+                <textarea 
+                  placeholder="Tell students about this capture..."
+                  value={imageCaptionInput}
+                  onChange={e => setImageCaptionInput(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-105 bg-slate-50/50 h-20 resize-none"
+                />
+              </div>
+
+              {uploadSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10.5px] rounded-lg leading-relaxed">
+                  {uploadSuccess}
+                </div>
+              )}
+
+              {uploadError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-[10.5px] rounded-lg leading-relaxed">
+                  {uploadError}
+                </div>
+              )}
+
+              <button 
+                type="submit"
+                disabled={submittingImage}
+                className="w-full bg-[#0252CD] hover:bg-blue-750 text-white font-bold uppercase tracking-wider py-2.5 rounded-xl text-[10px] cursor-pointer transition-colors disabled:opacity-50"
+              >
+                {submittingImage ? 'Submitting...' : 'Upload Submissions Roster'}
+              </button>
+            </form>
+          </div>
+
+          {/* Submission history queue */}
+          <div className="lg:col-span-2 bg-white border border-slate-200 rounded-[20px] p-5 sm:p-6 shadow-xs h-fit">
+            <h3 className="font-sans font-bold text-slate-900 uppercase tracking-wider mb-4 text-xs flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <ImageIcon className="w-4.5 h-4.5 text-indigo-600 shrink-0" /> আমার সাবমিশন ইতিহাস (My Submission Logs)
+              </span>
+              <span className="bg-slate-100 text-slate-700 text-[9px] font-black font-mono px-2 py-0.5 rounded-md">
+                {myGallerySubmissions.length} posts
+              </span>
+            </h3>
+
+            {myGallerySubmissions.length === 0 ? (
+              <div className="py-16 text-center text-slate-400">
+                <ImageIcon className="w-10 h-10 text-slate-200 mx-auto mb-3 stroke-1" />
+                <p className="font-bold text-slate-800 text-xs font-sans">আপনি এখনো কোনো ছবি সাবমিট করেননি!</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-sans">বামপাশের ফরমটি ব্যবহার করে কলেজের প্রথম লাইব্রেরি মোমেন্ট সাবমিট করুন।</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                {myGallerySubmissions.map(item => (
+                  <div key={item.id} className="p-4 border border-slate-200 rounded-xl flex gap-4 bg-slate-50/50 hover:bg-white transition-all duration-150 text-left">
+                    <img 
+                      src={item.imageUrl} 
+                      alt={item.caption} 
+                      referrerPolicy="no-referrer"
+                      className="w-16 h-16 rounded-lg object-cover bg-slate-200 shrink-0"
+                      onError={e => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200';
+                      }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-bold text-slate-900 text-xs truncate max-w-[200px]" title={item.title || item.caption}>
+                          {item.title || item.caption}
+                        </h4>
+                        <span className="text-[8.5px] text-slate-400 font-mono">
+                          {new Date(item.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-[10.5px] text-slate-500 line-clamp-1 mt-1">{item.caption || item.description}</p>
+                      
+                      <div className="mt-2.5 flex items-center justify-between">
+                        {/* Status Pills */}
+                        {(!item.status || item.status === 'APPROVED') && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-sans">
+                            ● Approved & Published
+                          </span>
+                        )}
+                        {item.status === 'PENDING' && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-705 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-sans">
+                            ● Review Pending
+                          </span>
+                        )}
+                        {item.status === 'REJECTED' && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-750 bg-rose-50 border border-rose-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-sans">
+                            ✕ Rejected
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
 
     </div>
   );

@@ -9,6 +9,7 @@ import StudentDashboard from './components/StudentDashboard.js';
 import AdminDashboard from './components/AdminDashboard.js';
 import EBookView from './components/EBookView.js';
 import ProfileDetails from './components/ProfileDetails.js';
+import SupportWidget from './components/SupportWidget.js';
 import { Book, Notification, Librarian, GalleryItem, Student } from './types.js';
 
 export default function App() {
@@ -274,6 +275,11 @@ export default function App() {
             setSearchQuery={setSearchQuery}
             setSelectedBookId={setSelectedBookId}
             setCurrentView={setCurrentView}
+            user={user}
+            onUpdateUser={(updatedStudent) => {
+              setUser(updatedStudent);
+              localStorage.setItem('scholar_user', JSON.stringify(updatedStudent));
+            }}
           />
         )}
 
@@ -285,6 +291,10 @@ export default function App() {
             setSelectedBookId={setSelectedBookId}
             user={user}
             requestBorrow={requestBorrow}
+            onUpdateUser={(updatedStudent) => {
+              setUser(updatedStudent);
+              localStorage.setItem('scholar_user', JSON.stringify(updatedStudent));
+            }}
           />
         )}
 
@@ -306,7 +316,6 @@ export default function App() {
                 localStorage.setItem('scholar_user', JSON.stringify(updatedStudent));
               }}
               setCurrentView={setCurrentView}
-              branding={branding}
             />
           ) : (
             <div className="max-w-md mx-auto my-16 text-center text-slate-500 font-sans p-8 bg-white border border-slate-200">
@@ -328,6 +337,10 @@ export default function App() {
               setSelectedBookId={setSelectedBookId}
               logout={logout}
               branding={branding}
+              onUpdateUser={(updatedStudent) => {
+                setUser(updatedStudent);
+                localStorage.setItem('scholar_user', JSON.stringify(updatedStudent));
+              }}
             />
           ) : (
             // Handcrafted high-fidelity portal matching requirements
@@ -404,8 +417,6 @@ export default function App() {
               loadLibrarians={loadLibrarians}
               galleryItems={galleryItems}
               loadGalleryItems={loadGalleryItems}
-              branding={branding}
-              loadBranding={loadBranding}
             />
           ) : (
             <div className="max-w-md mx-auto text-center p-12 text-gray-500 font-sans select-none">
@@ -421,6 +432,9 @@ export default function App() {
 
       {/* Styled institutional Footer */}
       <Footer branding={branding} />
+
+      {/* Premium Floating Support Widget */}
+      <SupportWidget student={user} />
 
     </div>
   );

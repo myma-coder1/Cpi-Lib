@@ -33,6 +33,7 @@ export interface Student {
   address?: string;
   photoUrl?: string;
   registration?: string; // registration number
+  wishlist?: string[]; // Account-synced book id bookmarks
 }
 
 export interface LibraryStatus {
@@ -92,6 +93,10 @@ export interface GalleryItem {
   imageUrl: string;
   caption: string;
   createdAt: string;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  title?: string;
+  description?: string;
+  submittedByRoll?: string;
 }
 
 export interface Notice {
@@ -125,5 +130,21 @@ export interface BrandingConfig {
   websiteUrl: string;
   footerText: string;
   copyrightText: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  name: string;
+  email: string;
+  rollNumber?: string;
+  registration?: string;
+  department?: string;
+  semester?: number;
+  subject?: string;
+  message: string;
+  createdAt: string; // ISO string
+  status: 'PENDING' | 'READ' | 'ARCHIVED' | 'REPLIED';
+  replyText?: string;
+  repliedAt?: string;
 }
 
