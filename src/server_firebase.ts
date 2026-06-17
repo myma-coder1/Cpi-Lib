@@ -17,9 +17,24 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { generate50EBooks } from './server_db.js';
 
-// Read config safely
-const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-const firebaseConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
+// Read config safely with a fallback for Vercel and serverless environments
+let firebaseConfig: any;
+try {
+  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+  firebaseConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
+} catch (e) {
+  console.log("Using embedded fallback Firebase configuration...");
+  firebaseConfig = {
+    projectId: "natural-mesh-0mln4",
+    appId: "1:487461809416:web:abac572d46959b4a5090bd",
+    apiKey: "AIzaSyCigg7paGjRgYMGNqA8DAhM5g1ZqkSyHOk",
+    authDomain: "natural-mesh-0mln4.firebaseapp.com",
+    firestoreDatabaseId: "ai-studio-6285f58e-462b-420b-9cb6-242c181b0135",
+    storageBucket: "natural-mesh-0mln4.firebasestorage.app",
+    messagingSenderId: "487461809416",
+    measurementId: ""
+  };
+}
 
 // Initialize Firebase client SDK to run on server context
 const app = initializeApp(firebaseConfig);
