@@ -30,7 +30,16 @@ import {
   saveGalleryItem,
   deleteGalleryItem,
   getLibraryStatus,
-  saveLibraryStatus
+  saveLibraryStatus,
+  getAllNotices,
+  getNoticeById,
+  saveNotice,
+  deleteNotice,
+  getAllHeroSlides,
+  saveHeroSlide,
+  deleteHeroSlide,
+  getBrandingConfig,
+  saveBrandingConfig
 } from './src/server_firebase.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -692,6 +701,12 @@ async function runServer() {
       if (req.body.photoUrl !== undefined) {
         student.photoUrl = req.body.photoUrl;
       }
+      if (req.body.semester !== undefined) {
+        student.semester = parseInt(req.body.semester, 10) || student.semester;
+      }
+      if (req.body.registration !== undefined) {
+        student.registration = req.body.registration;
+      }
 
       const newRoll = req.body.rollNumber ? req.body.rollNumber.toUpperCase().trim() : null;
       if (newRoll && newRoll !== oldRoll) {
@@ -1101,6 +1116,164 @@ async function runServer() {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // ==========================================
+  // NOTICE BOARD CONTROLLERS
+  // ==========================================
+  app.get('/api/notices', async (req, res) => {
+    try {
+      const list = await getAllNotices();
+      res.json(list || []);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/notices/:id', async (req, res) => {
+    try {
+      const notice = await getNoticeById(req.params.id);
+      if (!notice) return res.status(404).json({ error: 'Notice not found' });
+      res.json(notice);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/notices', async (req, res) => {
+    try {
+      const { id, title, content, attachments, publishDate, expiryDate, isUrgent, isPinned } = req.body;
+      if (!title || !content) {
+        return res.status(400).json({ error: 'Title and content are required' });
+      }
+
+      const isNew = !id;
+      const finalId = id || `notice-${Date.now()}`;
+      
+      const newNotice = {
+        id: finalId,
+        title,
+        content,
+        attachments: attachments || '',
+        publishDate: publishDate || new Date().toISOString().split('T')[0],
+        expiryDate: expiryDate || '',
+        isUrgent: !!isUrgent,
+        isPinned: !!isPinned,
+        createdAt: new Date().toISOString()
+      };
+
+      await saveNotice(newNotice);
+
+      // Trigger automatic student inbox notification on creation
+      if (isNew) {
+        await saveNotification({
+          id: `notif-notice-${Date.now()}`,
+          studentRoll: '', // broadcast wildcard
+          title: isUrgent ? '🚨 Urgent Notice Published' : '📢 New Announcement posted',
+          message: `Notice posted: "${title}". Check the Notice Board for full academic updates.`,
+          createdAt: new Date().toISOString(),
+          isRead: false,
+          type: 'INFO'
+        });
+      }
+
+      res.status(isNew ? 201 : 200).json(newNotice);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete('/api/admin/notices/:id', async (req, res) => {
+    try {
+      await deleteNotice(req.params.id);
+      res.json({ success: true, message: 'Notice deleted successfully' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ==========================================
+  // HERO CAROUSEL CONTROLLERS
+  // ==========================================
+  app.get('/api/hero-slides', async (req, res) => {
+    try {
+      const list = await getAllHeroSlides();
+      res.json(list || []);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/hero-slides', async (req, res) => {
+    try {
+      const { id, imageUrl, title, subtitle } = req.body;
+      if (!imageUrl || !title) {
+        return res.status(400).json({ error: 'imageUrl and title are required' });
+      }
+
+      const slideId = id || `slide-${Date.now()}`;
+      const newSlide = {
+        id: slideId,
+        imageUrl,
+        title,
+        subtitle: subtitle || '',
+        createdAt: new Date().toISOString()
+      };
+
+      await saveHeroSlide(newSlide);
+      res.status(id ? 200 : 201).json(newSlide);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete('/api/admin/hero-slides/:id', async (req, res) => {
+    try {
+      await deleteHeroSlide(req.params.id);
+      res.json({ success: true, message: 'Hero slide deleted successfully' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ==========================================
+  // INSTUTIONAL BRANDING CONTROLLERS
+  // ==========================================
+  app.get('/api/branding', async (req, res) => {
+    try {
+      const config = await getBrandingConfig();
+      res.json(config);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/branding', async (req, res) => {
+    try {
+      const { libraryName, shortName, logoUrl, email, phone, address, websiteUrl, footerText, copyrightText } = req.body;
+      if (!libraryName || !shortName) {
+        return res.status(400).json({ error: 'libraryName and shortName are required' });
+      }
+
+      const updated = {
+        id: 'config',
+        libraryName,
+        shortName,
+        logoUrl: logoUrl || '',
+        email: email || '',
+        phone: phone || '',
+        address: address || '',
+        websiteUrl: websiteUrl || '',
+        footerText: footerText || '',
+        copyrightText: copyrightText || ''
+      };
+
+      await saveBrandingConfig(updated);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
 
   // Mount Vite / SPA static middleware
   if (process.env.NODE_ENV !== "production") {

@@ -3,7 +3,8 @@ import {
   Search, Compass, BookOpen, Scale, Palette, Cpu, Heart, 
   ChevronRight, ChevronLeft, Star, Languages, Phone, MapPin, Users, 
   Clock, Image as ImageIcon, Atom, Scroll, Gavel, Stethoscope,
-  Mail, MessageSquare, ExternalLink, Sparkles, AlertCircle, X, Maximize2, Play, Pause
+  Mail, MessageSquare, ExternalLink, Sparkles, AlertCircle, X, Maximize2, Play, Pause,
+  Pin, Megaphone, Download, FileText, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Librarian, GalleryItem, LibraryStatus } from '../types.js';
@@ -16,6 +17,7 @@ interface HomeViewProps {
   setSelectedBookId: (id: string) => void;
   setSearchQuery: (query: string) => void;
   setCategoryFilter: (category: string) => void;
+  branding?: any;
 }
 
 export default function HomeView({ 
@@ -25,11 +27,42 @@ export default function HomeView({
   setCurrentView, 
   setSelectedBookId, 
   setSearchQuery, 
-  setCategoryFilter 
+  setCategoryFilter,
+  branding
 }: HomeViewProps) {
   const [localSearch, setLocalSearch] = useState('');
   const [statusData, setStatusData] = useState<LibraryStatus | null>(null);
   const [recentBorrows, setRecentBorrows] = useState<Book[]>([]);
+
+  // Premium Notices & Hero Slides States
+  const [notices, setNotices] = useState<any[]>([]);
+  const [heroSlides, setHeroSlides] = useState<any[]>([]);
+  const [heroActiveIndex, setHeroActiveIndex] = useState(0);
+  const [selectedNotice, setSelectedNotice] = useState<any | null>(null);
+  const [showAllNoticesModal, setShowAllNoticesModal] = useState(false);
+
+  const defaultHeroSlides = [
+    {
+      id: 'default-1',
+      imageUrl: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=1600&auto=format&fit=crop&q=80',
+      title: 'Unlock Infinite Technical Knowledge',
+      subtitle: 'CPI Digital Library gateway offers peerless engineering literature indices, modern reading wings, and full E-Book reading hubs.'
+    },
+    {
+      id: 'default-2',
+      imageUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1600&auto=format&fit=crop&q=80',
+      title: 'Your Certified Digital Library Card is Ready',
+      subtitle: 'Log in to your student workspace, complete your profile fields with precise registration numbers, and download your library credentials PDF.'
+    },
+    {
+      id: 'default-3',
+      imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=1600&auto=format&fit=crop&q=80',
+      title: 'Active Technical Notices & Live Broadcasts',
+      subtitle: 'Never miss an exam countdown. The new instant-alert administrative notice boards keep your studies synchronized.'
+    }
+  ];
+
+  const activeSlidesList = heroSlides.length > 0 ? heroSlides : defaultHeroSlides;
 
   // Premium Gallery Carousel States
   const [activeSlide, setActiveSlide] = useState(0);
@@ -50,7 +83,34 @@ export default function HomeView({
       .then(res => res.json())
       .then(data => setStatusData(data))
       .catch(err => console.error("Could not fetch library status", err));
+
+    fetch('/api/notices')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setNotices(data);
+        }
+      })
+      .catch(err => console.error("Could not fetch notices", err));
+
+    fetch('/api/hero-slides')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setHeroSlides(data);
+        }
+      })
+      .catch(err => console.error("Could not fetch hero slides", err));
   }, []);
+
+  // Auto transition for hero slides
+  useEffect(() => {
+    if (activeSlidesList.length <= 1) return;
+    const timer = setInterval(() => {
+      setHeroActiveIndex((prev) => (prev + 1) % activeSlidesList.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
 
   // Keyboard navigation listener for image lightbox popup
   useEffect(() => {
@@ -144,53 +204,102 @@ export default function HomeView({
   return (
     <div className="font-sans text-[#334155] bg-slate-50/50 pb-16 animate-fade-in" id="home-view">
       
-      {/* 1. Hero Search Banner - Bounded Container with Modern Glass Backdrop */}
+      {/* 1. Hero Search Banner - Bounded Container with Modern Glass Backdrop & Dynamic Slides */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8" id="hero-banner-container">
-        <div 
-          className="relative h-[440px] rounded-3xl overflow-hidden bg-cover bg-center flex items-center shadow-xl border border-slate-200/50"
-          style={{ 
-            backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.5)), url('https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=1600&auto=format&fit=crop&q=80')` 
-          }}
-          id="hero-banner"
-        >
-          {/* Subtle absolute tech grid background pattern */}
-          <div className="absolute inset-0 bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+        <div className="relative h-[440px] rounded-3xl overflow-hidden shadow-xl border border-slate-200/50 bg-slate-900" id="hero-banner-slider-wrapper">
           
-          <div className="relative max-w-4xl mx-auto px-6 sm:px-12 text-center text-white z-10 w-full">
-            <div className="inline-flex items-center space-x-2 bg-blue-500/20 backdrop-blur-md rounded-full px-4 py-1.5 border border-white/10 mb-5">
-              <Sparkles className="w-3.5 h-3.5 text-[#F59E0B]" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-100">ScholarLib Unified ERP Terminal</span>
-            </div>
-            
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-4 font-sans text-white leading-tight">
-              Find Your Next <span className="text-blue-400">Academic Pursuit</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-xl mx-auto mb-8 leading-relaxed">
-              Instantly access over 50,000 peer-reviewed digital textbooks, specialized technology curriculums, and research papers curated by academic deans.
-            </p>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={heroActiveIndex}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+              className="absolute inset-0 w-full h-full bg-cover bg-center flex items-center"
+              style={{
+                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.52)), url('${activeSlidesList[heroActiveIndex]?.imageUrl}')`
+              }}
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+              
+              <div className="relative max-w-4xl mx-auto px-6 sm:px-12 text-center text-white z-10 w-full">
+                <div className="inline-flex items-center space-x-2 bg-blue-500/20 backdrop-blur-md rounded-full px-4 py-1.5 border border-white/10 mb-5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#F59E0B]" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-100">
+                    {branding?.shortName || "CpiLib"} Digital Portal
+                  </span>
+                </div>
+                
+                <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 font-sans text-white leading-tight">
+                  {activeSlidesList[heroActiveIndex]?.title}
+                </h1>
+                <p className="text-xs sm:text-xs md:text-sm text-slate-300 font-medium max-w-2xl mx-auto mb-8 leading-relaxed">
+                  {activeSlidesList[heroActiveIndex]?.subtitle}
+                </p>
 
-            {/* Premium 56px Search Bar Container */}
-            <form onSubmit={handleHeroSearch} className="relative max-w-2xl mx-auto flex bg-white/95 p-1.5 shadow-lg rounded-[18px] border border-slate-200/20" id="hero-search-form">
-              <div className="relative flex-grow flex items-center">
-                <Search className="absolute left-4 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search textbook title, engineering department, or code..." 
-                  value={localSearch}
-                  onChange={e => setLocalSearch(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-transparent text-slate-900 border-none outline-none font-sans text-xs placeholder-slate-400 focus:ring-0 focus:outline-none"
-                  id="hero-search-input"
-                />
+                {/* Premium Search Bar Container inside the Active Slide */}
+                <form onSubmit={handleHeroSearch} className="relative max-w-2xl mx-auto flex bg-white/95 p-1.5 shadow-lg rounded-[18px] border border-slate-200/20" id="hero-slider-search-form">
+                  <div className="relative flex-grow flex items-center">
+                    <Search className="absolute left-4 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Search textbook title, engineering department, or code..." 
+                      value={localSearch}
+                      onChange={e => setLocalSearch(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-transparent text-slate-900 border-none outline-none font-sans text-xs placeholder-slate-400 focus:ring-0 focus:outline-none"
+                      id="hero-slider-search-input"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    className="bg-gradient-to-r from-[#1E40AF] to-[#3B82F6] hover:brightness-[106%] text-white px-7 py-2.5 rounded-[12px] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md select-none"
+                    id="hero-slider-search-btn"
+                  >
+                    Search Catalog
+                  </button>
+                </form>
               </div>
-              <button 
-                type="submit"
-                className="bg-gradient-to-r from-[#1E40AF] to-[#3B82F6] hover:brightness-[106%] text-white px-7 py-2.5 rounded-[12px] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md select-none"
-                id="hero-search-btn"
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Manual Left/Right Arrow Chevrons */}
+          {activeSlidesList.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setHeroActiveIndex((prev) => (prev - 1 + activeSlidesList.length) % activeSlidesList.length)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-25 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
+                aria-label="Previous Hero Slide"
               >
-                Search Catalog
+                <ChevronLeft className="w-5 h-5" />
               </button>
-            </form>
-          </div>
+
+              <button
+                type="button"
+                onClick={() => setHeroActiveIndex((prev) => (prev + 1) % activeSlidesList.length)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-25 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
+                aria-label="Next Hero Slide"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </>
+          )}
+
+          {/* Slide dot indicators at bottom container edge */}
+          {activeSlidesList.length > 1 && (
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-25 flex space-x-2 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/5">
+              {activeSlidesList.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setHeroActiveIndex(idx)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    heroActiveIndex === idx ? 'bg-blue-500 w-4' : 'bg-white/50 hover:bg-white'
+                  }`}
+                  aria-label={`Go to hero slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -376,6 +485,101 @@ export default function HomeView({
 
           </div>
 
+        </div>
+      </section>
+
+      {/* 1.5 Real-time Notice Board Module */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-2" id="home-notice-board-section">
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-5 mb-6 gap-4 select-none">
+            <div>
+              <div className="inline-flex items-center space-x-2 bg-red-50 text-red-700 px-3 py-1 font-sans font-bold text-[9px] uppercase tracking-wider mb-2.5 border border-red-100 rounded-md">
+                <Megaphone className="w-3.5 h-3.5" />
+                <span>Notice Board System</span>
+              </div>
+              <h2 className="text-xl font-bold font-sans text-slate-900 tracking-tight">
+                অফিসিয়াল নোটিশ বোর্ড <span className="text-slate-400 font-medium font-sans">| Official Announcements</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">Stay up-to-date with academic updates, exam cycles, and central library notifications.</p>
+            </div>
+            
+            <button 
+              onClick={() => setShowAllNoticesModal(true)}
+              className="inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold px-4 py-2 rounded-xl transition-all border border-slate-200 cursor-pointer uppercase tracking-wider gap-1.5 self-start sm:self-center"
+              id="view-all-notices-btn"
+            >
+              <span>View All Notices</span>
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            </button>
+          </div>
+
+          {notices.length === 0 ? (
+            <div className="text-center py-12 select-none text-slate-400">
+              <Megaphone className="w-10 h-10 mx-auto text-slate-300 mb-2.5" />
+              <p className="text-xs font-bold font-sans text-slate-600">No active notices published</p>
+              <p className="text-[10px] text-slate-400 mt-1">Academic administrative notices will appear in real-time as soon as logged.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="latest-notices-grid">
+              {notices
+                .sort((a, b) => {
+                  if (a.pinned && !b.pinned) return -1;
+                  if (!a.pinned && b.pinned) return 1;
+                  return new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime();
+                })
+                .slice(0, 3)
+                .map((notice) => {
+                  const isUrgent = notice.urgent;
+                  const isPinned = notice.pinned;
+                  return (
+                    <div 
+                      key={notice.id}
+                      onClick={() => setSelectedNotice(notice)}
+                      className={`relative bg-slate-50/50 border ${
+                        isUrgent ? 'border-red-200 bg-red-50/10 hover:border-red-400' : 'border-slate-200/80 hover:border-blue-500 hover:bg-white'
+                      } p-5 rounded-2xl cursor-pointer hover:shadow-md transition-all duration-300 flex flex-col justify-between group`}
+                      id={`notice-card-${notice.id}`}
+                    >
+                      <div>
+                        {/* Notice badges */}
+                        <div className="flex items-center justify-between mb-3.5 select-none">
+                          <span className="text-[9px] text-slate-400 font-mono font-bold flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            {new Date(notice.publishDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                          </span>
+                          
+                          <div className="flex gap-1.5 font-sans font-bold">
+                            {isPinned && (
+                              <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                <Pin className="w-2.5 h-2.5 text-amber-600" />
+                                Pinned
+                              </span>
+                            )}
+                            {isUrgent && (
+                              <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                                Urgent
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-snug mb-2 font-sans">
+                          {notice.title}
+                        </h3>
+                        <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed mb-4">
+                          {notice.description}
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-blue-600 group-hover:underline">
+                        <span>Read Full Details</span>
+                        <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -1147,6 +1351,216 @@ export default function HomeView({
           </div>
         </div>
       </section>
+
+      {/* ================= NOTICE DETAILED MODAL POPUP ================= */}
+      <AnimatePresence>
+        {selectedNotice && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-100 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setSelectedNotice(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto border border-slate-200/80 shadow-2xl relative p-6 sm:p-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setSelectedNotice(null)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Priority Labels */}
+              <div className="flex flex-wrap gap-2 mb-4 select-none">
+                {selectedNotice.pinned && (
+                  <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    <Pin className="w-3 h-3 text-amber-600" />
+                    Pinned Announcement
+                  </span>
+                )}
+                {selectedNotice.urgent && (
+                  <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider animate-pulse">
+                    Urgent Notice
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                  Official Publication
+                </span>
+              </div>
+
+              {/* Notice Title */}
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-sans leading-tight mb-3">
+                {selectedNotice.title}
+              </h1>
+
+              {/* Publish Date metadata */}
+              <div className="flex items-center gap-2.5 text-xs text-slate-400 mb-6 pb-4 border-b border-slate-100 select-none font-sans">
+                <Calendar className="w-4 h-4 text-slate-400" />
+                <span>Published on:</span>
+                <strong className="text-slate-600">{new Date(selectedNotice.publishDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+                {selectedNotice.expiryDate && (
+                  <>
+                    <span className="text-slate-350">•</span>
+                    <span>Expires:</span>
+                    <strong className="text-red-500">{new Date(selectedNotice.expiryDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</strong>
+                  </>
+                )}
+              </div>
+
+              {/* Main Content */}
+              <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed space-y-4 mb-8 font-sans text-sm whitespace-pre-line">
+                {selectedNotice.description}
+              </div>
+
+              {/* Attachments Section */}
+              {selectedNotice.attachmentUrl && (
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-700">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 font-sans">Attached Files / Documentation</h4>
+                      <p className="text-[10px] text-slate-500 font-mono">Filetype: {selectedNotice.attachmentType || "PDF / Media Images"}</p>
+                    </div>
+                  </div>
+
+                  <a 
+                    href={selectedNotice.attachmentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs select-none"
+                    download
+                    id="download-notice-attachment"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Attachment</span>
+                  </a>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ================= ALL NOTICES BROWSER OVERLAY ================= */}
+      <AnimatePresence>
+        {showAllNoticesModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-90 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowAllNoticesModal(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white rounded-3xl w-full max-w-4xl h-[85vh] overflow-hidden border border-slate-200/80 shadow-2xl relative flex flex-col font-sans"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between select-none">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 font-sans flex items-center gap-2">
+                    <Megaphone className="w-5 h-5 text-[#1E40AF]" />
+                    <span>University Notice Archive</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Explore active administrative instructions, guidelines, and shift schedules.</p>
+                </div>
+
+                <button 
+                  onClick={() => setShowAllNoticesModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Inner List Container scrollable */}
+              <div className="flex-grow overflow-y-auto p-6 sm:p-8 space-y-4 bg-slate-50/50">
+                {notices.length === 0 ? (
+                  <div className="text-center py-20 text-slate-400">
+                    <Megaphone className="w-12 h-12 mx-auto text-slate-300 mb-2" />
+                    <p className="text-sm font-semibold">No announcements logged in system database.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {notices
+                      .sort((a, b) => {
+                        if (a.pinned && !b.pinned) return -1;
+                        if (!a.pinned && b.pinned) return 1;
+                        return new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime();
+                      })
+                      .map((notice) => {
+                        const isUrgent = notice.urgent;
+                        const isPinned = notice.pinned;
+                        return (
+                          <div 
+                            key={notice.id}
+                            onClick={() => {
+                              setSelectedNotice(notice);
+                            }}
+                            className={`p-5 rounded-2xl bg-white border ${
+                              isUrgent ? 'border-red-200 bg-red-50/10 hover:border-red-400' : 'border-slate-200/60 hover:border-blue-500'
+                            } hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col sm:flex-row items-start justify-between gap-4`}
+                          >
+                            <div className="space-y-1.5 flex-grow">
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1 select-none font-bold">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  {new Date(notice.publishDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </span>
+
+                                <div className="flex gap-1">
+                                  {isPinned && (
+                                    <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                                      <Pin className="w-2.5 h-2.5" /> Pinned
+                                    </span>
+                                  )}
+                                  {isUrgent && (
+                                    <span className="bg-red-50 border border-red-200 text-red-700 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse font-bold">
+                                      Urgent
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <h3 className="text-sm font-bold text-slate-900 font-sans hover:text-[#1E40AF]">
+                                {notice.title}
+                              </h3>
+                              <p className="text-xs text-slate-500 line-clamp-2 max-w-3xl leading-relaxed">
+                                {notice.description}
+                              </p>
+                            </div>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedNotice(notice);
+                              }}
+                              className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 hover:text-[#1E40AF] text-[#1E40AF] text-xs font-bold rounded-xl transition-all cursor-pointer self-start sm:self-center uppercase tracking-wide shrink-0 font-sans"
+                            >
+                              Open Details
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

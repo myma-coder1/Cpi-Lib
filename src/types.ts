@@ -32,6 +32,7 @@ export interface Student {
   session?: string;
   address?: string;
   photoUrl?: string;
+  registration?: string; // registration number
 }
 
 export interface LibraryStatus {
@@ -92,3 +93,37 @@ export interface GalleryItem {
   caption: string;
   createdAt: string;
 }
+
+export interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  attachments?: string; // image or file URL/identifier
+  publishDate: string;
+  expiryDate?: string;
+  isUrgent: boolean;
+  isPinned: boolean;
+  createdAt: string;
+}
+
+export interface HeroSlide {
+  id: string;
+  imageUrl: string;
+  title: string;
+  subtitle: string;
+  createdAt: string;
+}
+
+export interface BrandingConfig {
+  id: string; // "config"
+  libraryName: string;
+  shortName: string;
+  logoUrl: string;
+  email: string;
+  phone: string;
+  address: string;
+  websiteUrl: string;
+  footerText: string;
+  copyrightText: string;
+}
+

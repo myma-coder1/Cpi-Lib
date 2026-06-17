@@ -33,13 +33,32 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState<string>('');
   const [loginError, setLoginError] = useState<string>('');
   const [loadingLogin, setLoadingLogin] = useState<boolean>(false);
+  
+  // Branding settings config
+  const [branding, setBranding] = useState<any>(null);
 
   useEffect(() => {
+    (window as any).refreshAppBranding = () => {
+      loadBranding();
+    };
     loadBooks();
     checkExistingSession();
     loadLibrarians();
     loadGalleryItems();
+    loadBranding();
   }, []);
+
+  const loadBranding = async () => {
+    try {
+      const res = await fetch('/api/branding');
+      if (res.ok) {
+        const data = await res.json();
+        setBranding(data);
+      }
+    } catch (e) {
+      console.error("Failed to load branding configurations", e);
+    }
+  };
 
   const loadLibrarians = async () => {
     try {
@@ -218,6 +237,7 @@ export default function App() {
         setCurrentView={setCurrentView} 
         user={user}
         logout={logout}
+        branding={branding}
       />
 
       {/* Primary responsive view routing segment */}
@@ -241,6 +261,7 @@ export default function App() {
               setSelectedBookId(id);
               setCurrentView('book-detail');
             }}
+            branding={branding}
           />
         )}
 
@@ -285,6 +306,7 @@ export default function App() {
                 localStorage.setItem('scholar_user', JSON.stringify(updatedStudent));
               }}
               setCurrentView={setCurrentView}
+              branding={branding}
             />
           ) : (
             <div className="max-w-md mx-auto my-16 text-center text-slate-500 font-sans p-8 bg-white border border-slate-200">
@@ -305,14 +327,15 @@ export default function App() {
               setCurrentView={setCurrentView} 
               setSelectedBookId={setSelectedBookId}
               logout={logout}
+              branding={branding}
             />
           ) : (
             // Handcrafted high-fidelity portal matching requirements
             <div className="max-w-md mx-auto my-16 px-6 py-10 bg-white border border-slate-200 shadow-sm rounded-none font-sans select-none animate-fade-in" id="login-panel">
               <div className="text-center mb-8">
                 <span className="text-xs uppercase bg-blue-500/10 text-blue-600 px-3 py-1 rounded-sm font-semibold font-mono">University Portal</span>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mt-3">ScholarLib Terminal</h2>
-                <p className="text-xs text-slate-500 mt-1">Please authenticate with your Roll credentials to checkout textbooks.</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mt-3">{branding?.shortName || "CpiLib"} Terminal</h2>
+                <p className="text-xs text-slate-500 mt-1">Please authenticate with your Roll credentials to access profiles and catalog shelves.</p>
               </div>
 
               {loginError && (
@@ -381,6 +404,8 @@ export default function App() {
               loadLibrarians={loadLibrarians}
               galleryItems={galleryItems}
               loadGalleryItems={loadGalleryItems}
+              branding={branding}
+              loadBranding={loadBranding}
             />
           ) : (
             <div className="max-w-md mx-auto text-center p-12 text-gray-500 font-sans select-none">
@@ -395,7 +420,7 @@ export default function App() {
       </main>
 
       {/* Styled institutional Footer */}
-      <Footer />
+      <Footer branding={branding} />
 
     </div>
   );

@@ -4,7 +4,8 @@ import {
   Trash2, Edit, Plus, FileText, Download, TrendingUp, Cpu, 
   Trash, Save, X, Search, CheckCircle, RefreshCw, AlertCircle,
   UserPlus, Eye, BookOpenCheck, HelpCircle, Settings, ChevronRight, ChevronLeft,
-  Printer, Grid, Info, BookCheck, Shield, Image as ImageIcon, Briefcase, Menu, Upload
+  Printer, Grid, Info, BookCheck, Shield, Image as ImageIcon, Briefcase, Menu, Upload,
+  Megaphone, Pin
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 import { Book, Student, BorrowRecord, Fine, Librarian, GalleryItem } from '../types.js';
@@ -57,7 +58,7 @@ export default function AdminDashboard({
   galleryItems = [],
   loadGalleryItems
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'books' | 'students' | 'approvals' | 'fines' | 'reports' | 'settings' | 'help' | 'librarians' | 'gallery'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'books' | 'students' | 'approvals' | 'fines' | 'reports' | 'settings' | 'help' | 'librarians' | 'gallery' | 'notices' | 'branding' | 'sliders'>('analytics');
   
   // Library Status Admin Management States
   const [libStatus, setLibStatus] = useState<'OPEN' | 'CLOSED'>('OPEN');
@@ -80,6 +81,219 @@ export default function AdminDashboard({
       })
       .catch(err => console.error("Error fetching library status in admin panel", err));
   }, []);
+
+  // Branding Panel state inside AdminDashboard.tsx
+  const [brandingForm, setBrandingForm] = useState({
+    libraryName: '',
+    shortName: '',
+    logoUrl: '',
+    email: '',
+    phone: '',
+    address: '',
+    websiteUrl: '',
+    footerText: '',
+    copyrightText: ''
+  });
+  const [loadingBranding, setLoadingBranding] = useState(false);
+  const [brandingStatusText, setBrandingStatusText] = useState('');
+
+  // Notice Board management Panel states
+  const [adminNotices, setAdminNotices] = useState<any[]>([]);
+  const [showAddNotice, setShowAddNotice] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<any | null>(null);
+  const [noticeForm, setNoticeForm] = useState({
+    title: '',
+    description: '',
+    attachmentUrl: '',
+    attachmentType: 'PDF Document',
+    urgent: false,
+    pinned: false,
+    publishDate: new Date().toISOString().split('T')[0],
+    expiryDate: ''
+  });
+
+  // Hero Slides management Panel states
+  const [adminSlides, setAdminSlides] = useState<any[]>([]);
+  const [showAddSlide, setShowAddSlide] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<any | null>(null);
+  const [slideForm, setSlideForm] = useState({
+    title: '',
+    subtitle: '',
+    imageUrl: ''
+  });
+
+  const loadAdminNotices = () => {
+    fetch('/api/notices')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setAdminNotices(data);
+      })
+      .catch(err => console.error("Error fetching administrative notices", err));
+  };
+
+  const loadAdminSlides = () => {
+    fetch('/api/hero-slides')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setAdminSlides(data);
+      })
+      .catch(err => console.error("Error fetching hero slides list in admin panel", err));
+  };
+
+  useEffect(() => {
+    // Load branding, notices, slides on admin mount
+    fetch('/api/branding')
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setBrandingForm({
+            libraryName: data.libraryName || '',
+            shortName: data.shortName || '',
+            logoUrl: data.logoUrl || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            address: data.address || '',
+            websiteUrl: data.websiteUrl || '',
+            footerText: data.footerText || '',
+            copyrightText: data.copyrightText || ''
+          });
+        }
+      })
+      .catch(err => console.error("Error loading branding in admin panel", err));
+
+    loadAdminNotices();
+    loadAdminSlides();
+  }, []);
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoadingBranding(true);
+    setBrandingStatusText('');
+    try {
+      const res = await fetch('/api/branding', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(brandingForm)
+      });
+      if (res.ok) {
+        setBrandingStatusText('Institutional branding updated successfully! Refreshing dynamic components...');
+        // Refresh branding dynamically
+        fetch('/api/branding')
+          .then(res => res.json())
+          .then(data => {
+            if (data && (window as any).refreshAppBranding) {
+              (window as any).refreshAppBranding();
+            }
+          });
+      } else {
+        setBrandingStatusText('Could not synchronize logo or names.');
+      }
+    } catch (err) {
+      setBrandingStatusText('Network error syncing branding configuration.');
+    } finally {
+      setLoadingBranding(false);
+    }
+  };
+
+  const handleSaveNotice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noticeForm.title || !noticeForm.description) {
+      alert("Title and content description are required.");
+      return;
+    }
+    const isEdit = !!editingNotice;
+    const url = isEdit ? `/api/notices/${editingNotice.id}` : '/api/notices';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(isEdit ? { ...noticeForm, id: editingNotice.id } : noticeForm)
+      });
+      if (res.ok) {
+        alert(isEdit ? "Notice edited successfully!" : "New notice published. Live alerts dispatched to student portals!");
+        setShowAddNotice(false);
+        setEditingNotice(null);
+        setNoticeForm({
+          title: '',
+          description: '',
+          attachmentUrl: '',
+          attachmentType: 'PDF Document',
+          urgent: false,
+          pinned: false,
+          publishDate: new Date().toISOString().split('T')[0],
+          expiryDate: ''
+        });
+        loadAdminNotices();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to submit announcement.");
+      }
+    } catch (err) {
+      alert("Network error publishing notice.");
+    }
+  };
+
+  const handleDeleteNotice = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this notice permanently?")) return;
+    try {
+      const res = await fetch(`/api/notices/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        alert("Notice deleted successfully.");
+        loadAdminNotices();
+      } else {
+        alert("Could not remove notices.");
+      }
+    } catch (err) {
+      alert("Connection failed.");
+    }
+  };
+
+  const handleSaveSlide = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slideForm.title || !slideForm.imageUrl) {
+      alert("Title and dynamic image URL are required.");
+      return;
+    }
+    const isEdit = !!editingSlide;
+    const url = isEdit ? `/api/hero-slides/${editingSlide.id}` : '/api/hero-slides';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(isEdit ? { ...slideForm, id: editingSlide.id } : slideForm)
+      });
+      if (res.ok) {
+        alert("Slides synced successfully! The landing page will now update instantly.");
+        setShowAddSlide(false);
+        setEditingSlide(null);
+        setSlideForm({ title: '', subtitle: '', imageUrl: '' });
+        loadAdminSlides();
+      } else {
+        alert("Could not update slideshow components.");
+      }
+    } catch (err) {
+      alert("Failed to reach server.");
+    }
+  };
+
+  const handleDeleteSlide = async (id: string) => {
+    if (!confirm("Remove this hero banner? Information will be restored to system defaults.")) return;
+    try {
+      const res = await fetch(`/api/hero-slides/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        alert("Hero slide deleted.");
+        loadAdminSlides();
+      } else {
+        alert("Failed to delete.");
+      }
+    } catch (err) {
+      alert("Network fail.");
+    }
+  };
 
   const handleUpdateLibraryStatus = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -717,6 +931,9 @@ export default function AdminDashboard({
                 { id: 'analytics', label: 'Dashboard', icon: BarChart2, badge: null },
                 { id: 'students', label: 'Members Directory', icon: Users, badge: students.length },
                 { id: 'books', label: 'Books Database', icon: BookOpen, badge: books.length },
+                { id: 'notices', label: 'Notice Board', icon: Megaphone, badge: null },
+                { id: 'branding', label: 'Institution Branding', icon: Settings, badge: null },
+                { id: 'sliders', label: 'Hero Banner Slides', icon: ImageIcon, badge: null },
                 { id: 'librarians', label: 'Librarians Staff', icon: Shield, badge: librarians.length },
                 { id: 'gallery', label: 'Library Gallery', icon: ImageIcon, badge: galleryItems.length },
                 { id: 'approvals', label: 'Check-out Desk', icon: CheckSquare, badge: borrowRecords.filter(r => r.status === 'PENDING_APPROVE' || r.status === 'PENDING_RETURN').length || null },
@@ -800,6 +1017,9 @@ export default function AdminDashboard({
               { id: 'analytics', label: 'Dashboard', icon: BarChart2, badge: null },
               { id: 'students', label: 'Members Directory', icon: Users, badge: students.length },
               { id: 'books', label: 'Books Database', icon: BookOpen, badge: books.length },
+              { id: 'notices', label: 'Notice Board', icon: Megaphone, badge: null },
+              { id: 'branding', label: 'Institution Branding', icon: Settings, badge: null },
+              { id: 'sliders', label: 'Hero Banner Slides', icon: ImageIcon, badge: null },
               { id: 'librarians', label: 'Librarians Staff', icon: Shield, badge: librarians.length },
               { id: 'gallery', label: 'Library Gallery', icon: ImageIcon, badge: galleryItems.length },
               { id: 'approvals', label: 'Check-out Desk', icon: CheckSquare, badge: borrowRecords.filter(r => r.status === 'PENDING_APPROVE' || r.status === 'PENDING_RETURN').length || null },
@@ -2598,6 +2818,536 @@ export default function AdminDashboard({
                       <div className="p-4 flex-grow">
                         <p className="text-xs text-slate-800 font-medium leading-relaxed">{item.caption}</p>
                         <p className="text-[10px] text-slate-400 mt-2 font-mono">Date Uploaded: {new Date(item.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB: NOTICE BOARD ==================== */}
+          {activeTab === 'notices' && (
+            <div className="space-y-6 animate-fade-in font-sans text-[#334155]" id="notices-admin-tab">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900 tracking-tight">Academic Notice Board Management</h1>
+                  <p className="text-xs text-slate-550 mt-1">Add official student notifications, exam dates, vacation periods, and other technical circulars.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setEditingNotice(null);
+                    setNoticeForm({
+                      title: '',
+                      description: '',
+                      attachmentUrl: '',
+                      attachmentType: 'PDF Document',
+                      urgent: false,
+                      pinned: false,
+                      publishDate: new Date().toISOString().split('T')[0],
+                      expiryDate: ''
+                    });
+                    setShowAddNotice(true);
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm select-none"
+                  id="admin-create-notice-btn"
+                >
+                  <Plus className="w-4 h-4" /> Create New Notice
+                </button>
+              </div>
+
+              {/* Form Segment */}
+              {showAddNotice && (
+                <div className="bg-white p-6 border border-slate-205 rounded-2xl shadow-xs animate-slide-in">
+                  <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                    <h3 className="font-bold text-slate-900 text-sm">
+                      {editingNotice ? "Modify Published Circular" : "Publish New Official Circular"}
+                    </h3>
+                    <button 
+                      onClick={() => setShowAddNotice(false)}
+                      className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-650 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveNotice} className="space-y-4 font-sans text-left">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-sans">
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Notice Title (শিরোনাম) *</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={noticeForm.title}
+                          onChange={e => setNoticeForm({ ...noticeForm, title: e.target.value })}
+                          placeholder="e.g. ১ম পর্ব সমাপনী পরীক্ষার সময়সূচি প্রকাশ প্রসঙ্গে সংশোধিত বিজ্ঞপ্তি"
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-650 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Detailed Content Description (নোটিশের মূল বিষয়বস্তু) *</label>
+                        <textarea 
+                          rows={6}
+                          required
+                          value={noticeForm.description}
+                          onChange={e => setNoticeForm({ ...noticeForm, description: e.target.value })}
+                          placeholder="নোটিশের বিস্তারিত অংশ এখানে বাংলায় অথবা ইংরেজিতে লিখুন..."
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-655 rounded-lg whitespace-pre-wrap leading-relaxed"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Attachment File URL (সংযুক্ত ফাইল লিঙ্ক/লিফলেট)</label>
+                        <input 
+                          type="url" 
+                          value={noticeForm.attachmentUrl}
+                          onChange={e => setNoticeForm({ ...noticeForm, attachmentUrl: e.target.value })}
+                          placeholder="https://example.com/files/notice.pdf"
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-655 rounded-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Attachment Type</label>
+                        <select 
+                          value={noticeForm.attachmentType}
+                          onChange={e => setNoticeForm({ ...noticeForm, attachmentType: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-655 rounded-lg"
+                        >
+                          <option value="PDF Document">PDF Document (.pdf)</option>
+                          <option value="JPEG Roster Image">JPEG Roster Image (.jpg)</option>
+                          <option value="Excel Sheet Ledger">Excel Sheet Ledger (.xlsx)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Publish Date (প্রকাশের তারিখ) *</label>
+                        <input 
+                          type="date" 
+                          required
+                          value={noticeForm.publishDate}
+                          onChange={e => setNoticeForm({ ...noticeForm, publishDate: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-655 rounded-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Expiry Date (মেয়াদোত্তীর্ণের তারিখ)</label>
+                        <input 
+                          type="date" 
+                          value={noticeForm.expiryDate}
+                          onChange={e => setNoticeForm({ ...noticeForm, expiryDate: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-655 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="flex items-center space-x-6 pt-3 select-none">
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={noticeForm.urgent}
+                            onChange={e => setNoticeForm({ ...noticeForm, urgent: e.target.checked })}
+                            className="rounded text-red-650 focus:ring-red-500 w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold text-red-650 uppercase tracking-wide">Mark as Urgent (জরুরি বিজ্ঞপ্তি)</span>
+                        </label>
+
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={noticeForm.pinned}
+                            onChange={e => setNoticeForm({ ...noticeForm, pinned: e.target.checked })}
+                            className="rounded text-amber-650 focus:ring-amber-500 w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Pin Announcement (শীর্ষে পিন করুন)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100 select-none">
+                      <button 
+                        type="button"
+                        onClick={() => setShowAddNotice(false)}
+                        className="bg-white border border-slate-200 text-slate-705 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-blue-700 cursor-pointer flex items-center gap-1"
+                      >
+                        <Save className="w-4 h-4" /> 
+                        <span>{editingNotice ? "Update Notice" : "Publish Announcement"}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Active Notices Registry */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs text-left">
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between select-none">
+                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-505">Notice records registry</h3>
+                  <span className="text-[10px] font-mono text-slate-400">Total Publications: {adminNotices.length}</span>
+                </div>
+
+                {adminNotices.length === 0 ? (
+                  <div className="text-center py-12 select-none text-slate-400">
+                    <Megaphone className="w-10 h-10 mx-auto text-slate-250 mb-2" />
+                    <p className="text-xs font-bold text-slate-650 font-sans">No administrative circulars found.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {adminNotices
+                      .sort((a, b) => {
+                        if (a.pinned && !b.pinned) return -1;
+                        if (!a.pinned && b.pinned) return 1;
+                        return new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime();
+                      })
+                      .map((notice) => (
+                        <div key={notice.id} className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50/45 transition-colors">
+                          <div className="space-y-1.5 flex-grow text-left">
+                            <div className="flex items-center gap-2 flex-wrap select-none">
+                              <span className="text-[9.5px] text-slate-400 font-mono font-bold">
+                                Publish date: {new Date(notice.publishDate).toLocaleDateString()}
+                              </span>
+                              {notice.pinned && (
+                                <span className="inline-flex items-center bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                  Pinned
+                                </span>
+                              )}
+                              {notice.urgent && (
+                                <span className="inline-flex items-center bg-red-50 border border-red-200 text-red-700 text-[8px] font-bold px-2 py-0.5 rounded uppercase tracking-wider animate-pulse">
+                                  Urgent
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-900 font-sans">
+                              {notice.title}
+                            </h4>
+                            <p className="text-xs text-slate-550 line-clamp-2 max-w-3xl leading-relaxed font-sans">
+                              {notice.description}
+                            </p>
+                          </div>
+
+                          <div className="flex gap-2 shrink-0 select-none">
+                            <button 
+                              onClick={() => {
+                                setEditingNotice(notice);
+                                setNoticeForm({
+                                  title: notice.title,
+                                  description: notice.description,
+                                  attachmentUrl: notice.attachmentUrl || '',
+                                  attachmentType: notice.attachmentType || 'PDF Document',
+                                  urgent: !!notice.urgent,
+                                  pinned: !!notice.pinned,
+                                  publishDate: notice.publishDate,
+                                  expiryDate: notice.expiryDate || ''
+                                });
+                                setShowAddNotice(true);
+                              }}
+                              className="p-1 px-2.5 border border-slate-205 hover:bg-slate-50 hover:text-blue-650 rounded text-[10px] font-extrabold uppercase text-slate-650 cursor-pointer flex items-center gap-1 transition-colors"
+                              title="Edit"
+                            >
+                              <Edit className="w-3 h-3" /> Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteNotice(notice.id)}
+                              className="p-1 px-2.5 border border-red-205 hover:bg-red-50 hover:text-red-750 rounded text-[10px] font-extrabold uppercase text-red-650 cursor-pointer flex items-center gap-1 transition-colors"
+                              title="Delete notice"
+                            >
+                              <Trash className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB: WEBSITE BRANDING ==================== */}
+          {activeTab === 'branding' && (
+            <div className="space-y-6 animate-fade-in font-sans text-[#334155]" id="branding-tab">
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">Portal Identity & Website Branding</h1>
+                <p className="text-xs text-slate-550 mt-1">Configure systemic variables instantly like names, logos, official contacts, and web portals active on layout margins.</p>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs">
+                <form onSubmit={handleSaveBranding} className="space-y-6">
+                  {brandingStatusText && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold rounded-xl animate-fade-in select-none text-left">
+                      {brandingStatusText}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Official Library Name *</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={brandingForm.libraryName}
+                        onChange={e => setBrandingForm({ ...brandingForm, libraryName: e.target.value })}
+                        placeholder="e.g. Chatpoly Central Digital Library"
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Short Header Name (navbar layout) *</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={brandingForm.shortName}
+                        onChange={e => setBrandingForm({ ...brandingForm, shortName: e.target.value })}
+                        placeholder="e.g. CpiLib"
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Custom Shield Logo Image URL</label>
+                      <input 
+                        type="url" 
+                        value={brandingForm.logoUrl}
+                        onChange={e => setBrandingForm({ ...brandingForm, logoUrl: e.target.value })}
+                        placeholder="https://example.com/logo.png"
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Official Support Email</label>
+                      <input 
+                        type="email" 
+                        value={brandingForm.email}
+                        onChange={e => setBrandingForm({ ...brandingForm, email: e.target.value })}
+                        placeholder="library@chattpoly.edu.bd"
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Official Hotline / Phone</label>
+                      <input 
+                        type="text" 
+                        value={brandingForm.phone}
+                        onChange={e => setBrandingForm({ ...brandingForm, phone: e.target.value })}
+                        placeholder="+880 1712-345678"
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Physical Campus Station Address</label>
+                      <input 
+                        type="text" 
+                        value={brandingForm.address}
+                        onChange={e => setBrandingForm({ ...brandingForm, address: e.target.value })}
+                        placeholder="Chattogram Port Road, Chattogram, Bangladesh"
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Official Website URL</label>
+                      <input 
+                        type="url" 
+                        value={brandingForm.websiteUrl}
+                        onChange={e => setBrandingForm({ ...brandingForm, websiteUrl: e.target.value })}
+                        placeholder="https://chattpoly.edu.bd"
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Footer Description text</label>
+                      <input 
+                        type="text" 
+                        value={brandingForm.footerText}
+                        onChange={e => setBrandingForm({ ...brandingForm, footerText: e.target.value })}
+                        placeholder="CPI Central library provides unified research indices and certified textbooks."
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">Copyright Statement (footer legal) *</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={brandingForm.copyrightText}
+                        onChange={e => setBrandingForm({ ...brandingForm, copyrightText: e.target.value })}
+                        placeholder="© 2026 Chatpoly Central Library. All Rights Reserved."
+                        className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-600 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-start select-none pt-2 border-t border-slate-100">
+                    <button 
+                      type="submit"
+                      disabled={loadingBranding}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold px-7 py-3 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm flex items-center gap-1.5 animate-pulse-once"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{loadingBranding ? "Synchronizing Configuration..." : "Synchronize System Customizations"}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB: HERO BANNER SLIDES ==================== */}
+          {activeTab === 'sliders' && (
+            <div className="space-y-6 animate-fade-in font-sans text-[#334155]" id="sliders-tab">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900 tracking-tight">Main Hero Slides Directory</h1>
+                  <p className="text-xs text-slate-550 mt-1">Replace background images, change display headings and subtitles rendered in the homepage top viewport dynamically.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setEditingSlide(null);
+                    setSlideForm({ title: '', subtitle: '', imageUrl: '' });
+                    setShowAddSlide(true);
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-blue-750 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm select-none"
+                  id="add-banner-slide-btn"
+                >
+                  <Plus className="w-4 h-4" /> Add Hero Slide
+                </button>
+              </div>
+
+              {/* Form Segment */}
+              {showAddSlide && (
+                <div className="bg-white p-6 border border-slate-205 rounded-2xl shadow-xs animate-slide-in">
+                  <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 select-none">
+                    <h3 className="font-bold text-slate-900 text-sm">
+                      {editingSlide ? "Modify Slideshow Item" : "Create Slideshow Banner"}
+                    </h3>
+                    <button 
+                      onClick={() => setShowAddSlide(false)}
+                      className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-650 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveSlide} className="space-y-4 text-left font-sans">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Slide Heading Title (মূল ব্যানার লেখা) *</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={slideForm.title}
+                          onChange={e => setSlideForm({ ...slideForm, title: e.target.value })}
+                          placeholder="e.g. Unlock Infinite Technical Knowledge"
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-650 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Slide Subtitle Announcement (বর্ণনা লাইন) *</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={slideForm.subtitle}
+                          onChange={e => setSlideForm({ ...slideForm, subtitle: e.target.value })}
+                          placeholder="e.g. Access 50,050 peer-reviewed digital textbooks on engineering and technology."
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-650 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">Background Image URL (ব্যানার ছবির লিংক) *</label>
+                        <input 
+                          type="url" 
+                          required
+                          value={slideForm.imageUrl}
+                          onChange={e => setSlideForm({ ...slideForm, imageUrl: e.target.value })}
+                          placeholder="https://images.unsplash.com/photo-..."
+                          className="w-full bg-slate-50 border border-slate-200 p-2.5 text-xs focus:outline-none focus:border-blue-650 rounded-lg"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100 select-none">
+                      <button 
+                        type="button"
+                        onClick={() => setShowAddSlide(false)}
+                        className="bg-white border border-slate-205 text-slate-705 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-blue-700 cursor-pointer flex items-center gap-1"
+                      >
+                        <Save className="w-4 h-4" /> 
+                        <span>{editingSlide ? "Update Slide" : "Save and Install Slide"}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Roster list */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 select-none" id="hero-slides-admin-registry">
+                {adminSlides.length === 0 ? (
+                  <div className="col-span-full py-12 text-center bg-white border border-slate-200 p-8 text-slate-400 rounded-2xl">
+                    <ImageIcon className="w-10 h-10 mx-auto text-slate-305 mb-2" />
+                    <p className="text-xs font-bold">Standard fallback slides are operational in landing page.</p>
+                  </div>
+                ) : (
+                  adminSlides.map((slide) => (
+                    <div key={slide.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-blue-500 duration-200 relative group">
+                      <button 
+                        onClick={() => handleDeleteSlide(slide.id)}
+                        className="absolute right-3 top-3 z-10 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 hover:scale-105 transition-all shadow cursor-pointer font-sans"
+                        title="Delete photo"
+                      >
+                        <Trash className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="h-44 bg-slate-900 relative">
+                        <img 
+                          src={slide.imageUrl} 
+                          alt={slide.title} 
+                          className="w-full h-full object-cover opacity-60"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-x-4 bottom-4 text-white text-left">
+                          <span className="font-mono text-[8.5px] tracking-wider uppercase bg-blue-600 text-white px-2 py-0.5 rounded font-bold">Slide Registry: {slide.id}</span>
+                          <h4 className="text-xs font-bold line-clamp-1 mt-1">{slide.title}</h4>
+                        </div>
+                      </div>
+
+                      <div className="p-4 flex-grow text-left">
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{slide.subtitle}</p>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-1.5 select-none font-sans">
+                        <button 
+                          onClick={() => {
+                            setEditingSlide(slide);
+                            setSlideForm({
+                              title: slide.title,
+                              subtitle: slide.subtitle,
+                              imageUrl: slide.imageUrl
+                            });
+                            setShowAddSlide(true);
+                          }}
+                          className="p-1 px-3 border border-slate-205 hover:bg-white text-slate-650 text-[10px] font-extrabold uppercase rounded-lg flex items-center gap-1 transition-colors"
+                        >
+                          <Edit className="w-3 h-3" /> Edit Slide details
+                        </button>
                       </div>
                     </div>
                   ))

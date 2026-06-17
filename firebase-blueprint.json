@@ -132,6 +132,54 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "imageUrl", "createdAt"]
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "Information broadcast notices posted by library administration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "attachments": { "type": "string" },
+        "publishDate": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "isUrgent": { "type": "boolean" },
+        "isPinned": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "content", "publishDate", "isUrgent", "isPinned", "createdAt"]
+    },
+    "HeroSlide": {
+      "title": "HeroSlide",
+      "description": "Promotional slide banner images used for homepage carousel showcasing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "imageUrl", "title", "subtitle", "createdAt"]
+    },
+    "BrandingConfig": {
+      "title": "BrandingConfig",
+      "description": "Website customizable metadata parameters for institutional branding settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "libraryName": { "type": "string" },
+        "shortName": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "websiteUrl": { "type": "string" },
+        "footerText": { "type": "string" },
+        "copyrightText": { "type": "string" }
+      },
+      "required": ["id", "libraryName", "shortName", "logoUrl", "email", "phone", "address", "websiteUrl", "footerText", "copyrightText"]
     }
   },
   "firestore": {
@@ -166,6 +214,18 @@
     "/gallery/{galleryItemId}": {
       "schema": { "$ref": "#/entities/GalleryItem" },
       "description": "Library catalog and environmental picture showcases"
+    },
+    "/notices/{noticeId}": {
+      "schema": { "$ref": "#/entities/Notice" },
+      "description": "Administrative notice documents history and attachments"
+    },
+    "/hero_slides/{slideId}": {
+      "schema": { "$ref": "#/entities/HeroSlide" },
+      "description": "Banner slider slides custom parameters"
+    },
+    "/branding/{brandingId}": {
+      "schema": { "$ref": "#/entities/BrandingConfig" },
+      "description": "Dynamic layout customizable brand setup"
     }
   }
 }

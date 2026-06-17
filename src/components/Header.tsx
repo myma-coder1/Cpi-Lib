@@ -7,9 +7,10 @@ interface HeaderProps {
   setCurrentView: (view: string) => void;
   user: any;
   logout: () => void;
+  branding?: any;
 }
 
-export default function Header({ currentView, setCurrentView, user, logout }: HeaderProps) {
+export default function Header({ currentView, setCurrentView, user, logout, branding }: HeaderProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -66,7 +67,7 @@ export default function Header({ currentView, setCurrentView, user, logout }: He
     <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-slate-200/80 shadow-xs transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
         
-        {/* Brand Logo - Elite Modern Insitutional Header */}
+        {/* Brand Logo - Elite Modern Institutional Header */}
         <div 
           onClick={() => {
             setCurrentView('home');
@@ -76,12 +77,25 @@ export default function Header({ currentView, setCurrentView, user, logout }: He
           className="flex items-center space-x-3 cursor-pointer select-none group"
           id="logo"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1E40AF] to-[#3B82F6] flex items-center justify-center text-white font-extrabold text-lg shadow-sm group-hover:scale-[1.05] transition-transform duration-300">
-            S
-          </div>
+          {branding?.logoUrl ? (
+            <img 
+              src={branding.logoUrl} 
+              alt={branding.shortName || "CpiLib"} 
+              className="w-10 h-10 rounded-xl object-cover shadow-xs border border-slate-200 group-hover:scale-[1.05] transition-transform duration-300"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1E40AF] to-[#3B82F6] flex items-center justify-center text-white font-extrabold text-lg shadow-sm group-hover:scale-[1.05] transition-transform duration-300">
+              {(branding?.shortName || "CpiLib")[0]?.toUpperCase() || "C"}
+            </div>
+          )}
           <div className="flex flex-col">
-            <span className="font-sans font-extrabold text-base tracking-tight text-slate-900 uppercase">ScholarLib</span>
-            <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none mt-0.5">University System</span>
+            <span className="font-sans font-extrabold text-base tracking-tight text-slate-900 uppercase">
+              {branding?.shortName || "CpiLib"}
+            </span>
+            <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none mt-0.5">
+              {branding?.libraryName || "Central Library"}
+            </span>
           </div>
         </div>
 
@@ -145,7 +159,9 @@ export default function Header({ currentView, setCurrentView, user, logout }: He
             >
               <Bell className="w-[18px] h-[18px]" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#F59E0B] rounded-full ring-2 ring-white animate-pulse"></span>
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9.5px] font-black h-4.5 min-w-4.5 px-1.5 rounded-full flex items-center justify-center ring-2 ring-white animate-pulse">
+                  {unreadCount}
+                </span>
               )}
             </button>
 

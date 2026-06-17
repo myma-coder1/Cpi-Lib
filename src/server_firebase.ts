@@ -329,6 +329,91 @@ export async function seedDatabaseIfEmpty(
       };
       await setDoc(statusDocRef, sanitizeForFirestore(defaultStatus));
     }
+
+    // 6. Seed initial notices if empty
+    const noticesCol = collection(db, 'notices');
+    const noticesSnap = await getDocs(noticesCol);
+    if (noticesSnap.empty) {
+      console.log('Seeding default notices board items...');
+      const defaultNotices = [
+        {
+          id: 'notice-seed-1',
+          title: 'Semester Final Exam Schedule & Digital Card Distribution',
+          content: 'All students are hereby informed that the Semester Final Examinations are scheduled to commence shortly. It is mandatory for all students to download and print their Digital Library Card in PDF format from their profile dashboard. The printed library card is required for entry into the central study hall during the exam period.',
+          attachments: 'Exam_Library_Schedule_2026.pdf',
+          publishDate: new Date().toISOString().split('T')[0],
+          isUrgent: true,
+          isPinned: true,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 'notice-seed-2',
+          title: 'National Technology Reading Campaign & Literary Festival',
+          content: 'We are thrilled to launch the CPI Central Library Annual Technology Reading Campaign. Over 50 new engineering e-books and reference handbooks have been indexed in our catalog. Participate in coding handbook deep-dives and submit review summaries to earn direct academic leaderboard points.',
+          attachments: 'Tech_Campaign_Overview_2026.pdf',
+          publishDate: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+          isUrgent: false,
+          isPinned: false,
+          createdAt: new Date(Date.now() - 86400000).toISOString()
+        }
+      ];
+      for (const n of defaultNotices) {
+        await setDoc(doc(db, 'notices', n.id), sanitizeForFirestore(n));
+      }
+    }
+
+    // 7. Seed initial hero slides if empty
+    const slidesCol = collection(db, 'hero_slides');
+    const slidesSnap = await getDocs(slidesCol);
+    if (slidesSnap.empty) {
+      console.log('Seeding default premium hero slides...');
+      const defaultSlides = [
+        {
+          id: 'slide-seed-1',
+          imageUrl: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=1600&auto=format&fit=crop&q=80',
+          title: 'Unlock Infinite Technical Knowledge',
+          subtitle: 'CPI Digital Library gateway offers peerless engineering literature indices, modern reading wings, and full E-Book reading hubs.',
+          createdAt: new Date(Date.now() - 60000).toISOString()
+        },
+        {
+          id: 'slide-seed-2',
+          imageUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1600&auto=format&fit=crop&q=80',
+          title: 'Your Certified Digital Library Card is Ready',
+          subtitle: 'Log in to your student workspace, complete your profile fields with precise registration numbers, and download your library credentials PDF.',
+          createdAt: new Date(Date.now() - 30000).toISOString()
+        },
+        {
+          id: 'slide-seed-3',
+          imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=1600&auto=format&fit=crop&q=80',
+          title: 'Active Technical Notices & Live Broadcasts',
+          subtitle: 'Never miss an exam countdown. The new instant-alert administrative notice boards keep your studies synchronized.',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      for (const s of defaultSlides) {
+        await setDoc(doc(db, 'hero_slides', s.id), sanitizeForFirestore(s));
+      }
+    }
+
+    // 8. Seed default branding configuration if empty
+    const brandingDocRef = doc(db, 'branding', 'config');
+    const brandingSnap = await getDoc(brandingDocRef);
+    if (!brandingSnap.exists()) {
+      console.log('Seeding default branding config to Firestore...');
+      const defaultBranding = {
+        id: 'config',
+        libraryName: 'CPI Central Digital Library',
+        shortName: 'CpiLib',
+        logoUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=120&auto=format&fit=crop&q=80',
+        email: 'library@cpi.edu.bd',
+        phone: '+880-1712-345678',
+        address: 'CPI Campus, Technical Road, Bogura, Bangladesh',
+        websiteUrl: 'https://cpi.edu.bd',
+        footerText: 'The gateway to knowledge, reading excellence, and technical innovation at CPI.',
+        copyrightText: '© 2026 CPI Digital Library System. Developed with academic honor.'
+      };
+      await setDoc(brandingDocRef, sanitizeForFirestore(defaultBranding));
+    }
   } catch (error) {
     console.error('Error seeding Firebase database:', error);
   }
@@ -680,4 +765,128 @@ export async function saveLibraryStatus(status: LibraryStatus): Promise<void> {
     handleFirestoreError(error, OperationType.WRITE, 'library_status/current');
   }
 }
+
+// ==========================================
+// NOTICE BOARD FIRESTORE API HELPERS
+// ==========================================
+export async function getAllNotices(): Promise<any[]> {
+  const colRef = collection(db, 'notices');
+  try {
+    const snap = await getDocs(colRef);
+    const list: any[] = [];
+    snap.forEach(docSnap => {
+      list.push(docSnap.data());
+    });
+    // Sort logic: Pinned first, then by publishDate/createdAt descending
+    return list.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.publishDate || b.createdAt).getTime() - new Date(a.publishDate || a.createdAt).getTime();
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'notices');
+  }
+}
+
+export async function getNoticeById(id: string): Promise<any | null> {
+  const docRef = doc(db, 'notices', id);
+  try {
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? docSnap.data() : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `notices/${id}`);
+  }
+}
+
+export async function saveNotice(notice: any): Promise<void> {
+  const docRef = doc(db, 'notices', notice.id);
+  try {
+    await setDoc(docRef, sanitizeForFirestore(notice));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `notices/${notice.id}`);
+  }
+}
+
+export async function deleteNotice(id: string): Promise<void> {
+  const docRef = doc(db, 'notices', id);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
+  }
+}
+
+// ==========================================
+// HERO CAROUSEL FIRESTORE API HELPERS
+// ==========================================
+export async function getAllHeroSlides(): Promise<any[]> {
+  const colRef = collection(db, 'hero_slides');
+  try {
+    const snap = await getDocs(colRef);
+    const list: any[] = [];
+    snap.forEach(docSnap => {
+      list.push(docSnap.data());
+    });
+    return list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'hero_slides');
+  }
+}
+
+export async function saveHeroSlide(slide: any): Promise<void> {
+  const docRef = doc(db, 'hero_slides', slide.id);
+  try {
+    await setDoc(docRef, sanitizeForFirestore(slide));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `hero_slides/${slide.id}`);
+  }
+}
+
+export async function deleteHeroSlide(id: string): Promise<void> {
+  const docRef = doc(db, 'hero_slides', id);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `hero_slides/${id}`);
+  }
+}
+
+// ==========================================
+// INSTITUTIONAL BRANDING FIRESTORE API HELPERS
+// ==========================================
+export async function getBrandingConfig(): Promise<BrandingConfig> {
+  const docRef = doc(db, 'branding', 'config');
+  try {
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as BrandingConfig;
+    }
+    const defaultBranding: BrandingConfig = {
+      id: 'config',
+      libraryName: 'CPI Central Digital Library',
+      shortName: 'CpiLib',
+      logoUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=120&auto=format&fit=crop&q=80',
+      email: 'library@cpi.edu.bd',
+      phone: '+880-1712-345678',
+      address: 'CPI Campus, Technical Road, Bogura, Bangladesh',
+      websiteUrl: 'https://cpi.edu.bd',
+      footerText: 'The gateway to knowledge, reading excellence, and technical innovation at CPI.',
+      copyrightText: '© 2026 CPI Digital Library System. Developed with academic honor.'
+    };
+    await setDoc(docRef, sanitizeForFirestore(defaultBranding));
+    return defaultBranding;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'branding/config');
+  }
+}
+
+export async function saveBrandingConfig(config: BrandingConfig): Promise<void> {
+  const docRef = doc(db, 'branding', 'config');
+  try {
+    await setDoc(docRef, sanitizeForFirestore(config));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'branding/config');
+  }
+}
+
 
