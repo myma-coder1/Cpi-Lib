@@ -9,6 +9,8 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        'fs': path.resolve(__dirname, './src/fs_mock.ts'),
+        'path': path.resolve(__dirname, './src/path_mock.ts'),
       },
     },
     server: {

@@ -1725,16 +1725,10 @@ export default function AdminDashboard({
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-5 mb-6">
                 <div>
                   <h1 className="text-xl font-bold text-slate-900 tracking-tight">Catalog Books Database</h1>
-                  <p className="text-xs text-slate-500 mt-1">Submit new publications, edit shelf locations, or import specifications elements dynamically from OpenLibrary API.</p>
+                  <p className="text-xs text-slate-500 mt-1">Submit new publications, or edit shelf locations directly inside localized system stacks.</p>
                 </div>
 
                 <div className="flex gap-3">
-                  <button 
-                    onClick={() => setShowImportDrawer(!showImportDrawer)}
-                    className="btn-premium-secondary text-xs h-12"
-                  >
-                    {showImportDrawer ? 'Close OpenLibrary Importer' : 'OpenLibrary Integration'}
-                  </button>
                   <button 
                     onClick={() => {
                       setEditingBook(null);

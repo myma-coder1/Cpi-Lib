@@ -630,29 +630,7 @@ export default function CatalogView({
               )}
             </div>
 
-            {/* Source Segment Selection */}
-            <div className="flex bg-slate-100 border border-slate-200 p-1 rounded-lg w-full sm:w-auto text-[10px] font-bold uppercase tracking-wider select-none">
-              <button 
-                type="button"
-                onClick={() => {
-                  setSearchTarget('local');
-                  setApiError('');
-                }}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-md transition-all cursor-pointer ${searchTarget === 'local' ? 'bg-white text-slate-850 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                Local Index
-              </button>
-              <button 
-                type="button"
-                onClick={() => {
-                  setSearchTarget('openlibrary');
-                  triggerOpenLibraryQuery();
-                }}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${searchTarget === 'openlibrary' ? 'bg-white text-slate-850 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                <RefreshCw className={`w-3 h-3 ${apiLoading ? 'animate-spin' : ''}`} /> Open Library API Live
-              </button>
-            </div>
+            {/* Source Segment Selection is disabled as requested */}
           </form>
 
           {/* RECENT SEARCHES TABS */}
