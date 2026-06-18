@@ -1,13 +1,17 @@
 {
   "version": 2,
-  "rewrites": [
+  "cleanUrls": true,
+  "routes": [
     {
-      "source": "/api/:match*",
-      "destination": "/api/index.ts"
+      "src": "/api/(.*)",
+      "dest": "/api/index.ts"
     },
     {
-      "source": "/((?!api).*)" ,
-      "destination": "/index.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
