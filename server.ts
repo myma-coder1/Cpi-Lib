@@ -1297,7 +1297,8 @@ export async function getExpressApp() {
     }
   });
 
-  app.post('/api/admin/branding', async (req, res) => {
+  // Handle updates to branding config on both /api/branding and /api/admin/branding (POST & PUT)
+  const handleBrandingSave = async (req: any, res: any) => {
     try {
       const { libraryName, shortName, logoUrl, email, phone, address, websiteUrl, footerText, copyrightText } = req.body;
       if (!libraryName || !shortName) {
@@ -1322,7 +1323,12 @@ export async function getExpressApp() {
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
-  });
+  };
+
+  app.post('/api/admin/branding', handleBrandingSave);
+  app.put('/api/admin/branding', handleBrandingSave);
+  app.post('/api/branding', handleBrandingSave);
+  app.put('/api/branding', handleBrandingSave);
 
 
   // ==========================================

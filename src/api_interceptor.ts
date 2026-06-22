@@ -33,11 +33,15 @@ export function setupFetchInterceptor() {
           const cfg = await fb.getBrandingConfig();
           return jsonResponse(cfg);
         }
+        if (method === 'POST' || method === 'PUT') {
+          await fb.saveBrandingConfig(requestBody);
+          return jsonResponse({ message: 'Branding configuration updated successfully.', config: requestBody });
+        }
       }
       if (pathname === '/api/admin/branding') {
-        if (method === 'POST') {
+        if (method === 'POST' || method === 'PUT') {
           await fb.saveBrandingConfig(requestBody);
-          return jsonResponse({ message: 'Branding configuration updated successfully.' });
+          return jsonResponse({ message: 'Branding configuration updated successfully.', config: requestBody });
         }
       }
 
@@ -596,61 +600,44 @@ export function setupFetchInterceptor() {
         const students = await fb.getAllStudents();
         const fines = await fb.getAllFines();
 
-        const totalBooks = booksCol.length;
-        const totalPhysical = booksCol.filter(b => b.format !== 'E-Book').length;
-        const totalEBooks = booksCol.filter(b => b.format === 'E-Book').length;
-        const totalMembers = students.length;
+        const totalPhysicalBooksSum = booksCol.filter(b => b.format !== 'E-Book').reduce((sum, b) => sum + (b.copiesCount || 0), 0);
+        const totalEbooksCount = booksCol.filter(b => b.format === 'E-Book').length;
+        const activeStudentsLength = students.length;
+        const activeBorrows = borrowsCol.filter(b => b.status === 'BORROWED' || b.status === 'PENDING_RETURN').length;
+        const pendingRequests = borrowsCol.filter(b => b.status === 'PENDING_APPROVE').length;
 
-        const borrowedCount = borrowsCol.filter(b => b.status === 'BORROWED').length;
-        const pendingBorrowCount = borrowsCol.filter(b => b.status === 'PENDING_APPROVE').length;
-        const pendingReturnCount = borrowsCol.filter(b => b.status === 'PENDING_RETURN').length;
-        const overdueCount = borrowsCol.filter(b => b.status === 'BORROWED' && b.fineAmount > 0).length;
-
-        const totalFineCollected = fines.filter(f => f.status === 'PAID').reduce((acc, f) => acc + f.amount, 0);
-        const totalFinePending = fines.filter(f => f.status === 'UNPAID').reduce((acc, f) => acc + f.amount, 0);
-
-        // Map category distributions
         const catMap: { [cat: string]: number } = {};
         booksCol.forEach(b => {
           catMap[b.category] = (catMap[b.category] || 0) + 1;
         });
 
-        const categoryData = Object.keys(catMap).map(k => ({
+        const categoriesData = Object.keys(catMap).map(k => ({
           name: k,
           value: catMap[k]
-        }));
+        })).sort((a, b) => b.value - a.value).slice(0, 8);
+
+        const monthlyLoans = [
+          { month: 'Jan', loans: 110, digital: 45 },
+          { month: 'Feb', loans: 145, digital: 68 },
+          { month: 'Mar', loans: 230, digital: 112 },
+          { month: 'Apr', loans: 190, digital: 95 },
+          { month: 'May', loans: 320, digital: 140 },
+          { month: 'Jun', loans: activeBorrows + 150, digital: totalEbooksCount + 80 }
+        ];
+
+        const unpaidFinesTotal = fines.filter(f => f.status === 'UNPAID').reduce((sum, f) => sum + f.amount, 0);
+        const collectedFinesTotal = fines.filter(f => f.status === 'PAID').reduce((sum, f) => sum + f.amount, 0);
 
         const analytics = {
-          bookStats: {
-            totalBooks,
-            totalPhysical,
-            totalEBooks,
-            totalCopies: booksCol.reduce((s, b) => s + (b.copiesCount || 0), 0),
-            availableCopies: booksCol.reduce((s, b) => s + (b.availableCopies || 0), 0)
-          },
-          membershipStats: {
-            totalMembers
-          },
-          transactionStats: {
-            borrowedCount,
-            pendingBorrowCount,
-            pendingReturnCount,
-            overdueCount,
-            returnedCount: borrowsCol.filter(b => b.status === 'RETURNED').length
-          },
-          financialStats: {
-            totalFineCollected,
-            totalFinePending
-          },
-          categoryDistribution: categoryData,
-          weeklyTrends: [
-            { day: 'Sat', borrows: 12, returns: 10 },
-            { day: 'Sun', borrows: 19, returns: 12 },
-            { day: 'Mon', borrows: 15, returns: 18 },
-            { day: 'Tue', borrows: 27, returns: 20 },
-            { day: 'Wed', borrows: 22, returns: 15 },
-            { day: 'Thu', borrows: 31, returns: 28 }
-          ]
+          totalPhysicalBooksSum,
+          totalEbooksCount,
+          activeStudentsLength,
+          activeBorrows,
+          pendingRequests,
+          categoriesData,
+          monthlyLoans,
+          unpaidFinesTotal,
+          collectedFinesTotal
         };
 
         return jsonResponse(analytics);

@@ -915,7 +915,7 @@ export default function AdminDashboard({
       reportTitle = "Outstanding Student Fines Ledger";
       headers = ["Student Name", "Roll Number", "Department", "Semester", "Penalty Balance"];
       rows = students.map((s, idx) => {
-        const unpaidFine = fines.filter(f => f.studentRoll.toUpperCase() === s.rollNumber.toUpperCase() && f.status === 'UNPAID').reduce((sum, f) => sum + f.amount, 0);
+        const unpaidFine = fines.filter(f => (f.studentRoll || '').toUpperCase() === (s.rollNumber || '').toUpperCase() && f.status === 'UNPAID').reduce((sum, f) => sum + f.amount, 0);
         return [s.name, s.rollNumber, s.department, s.semester, `BDT ${unpaidFine}`];
       });
     } else {
@@ -985,15 +985,15 @@ export default function AdminDashboard({
 
   // Filters
   const localBooksFilter = books.filter(b => 
-    b.title.toLowerCase().includes(bookQuery.toLowerCase()) || 
-    b.author.toLowerCase().includes(bookQuery.toLowerCase()) || 
-    b.isbn.includes(bookQuery)
+    (b.title || '').toLowerCase().includes((bookQuery || '').toLowerCase()) || 
+    (b.author || '').toLowerCase().includes((bookQuery || '').toLowerCase()) || 
+    (b.isbn || '').includes(bookQuery || '')
   );
 
   const studentsFilter = students.filter(s => 
-    s.name.toLowerCase().includes(studentQuery.toLowerCase()) || 
-    s.rollNumber.toLowerCase().includes(studentQuery.toLowerCase()) ||
-    s.department.toLowerCase().includes(studentQuery.toLowerCase())
+    (s.name || '').toLowerCase().includes((studentQuery || '').toLowerCase()) || 
+    (s.rollNumber || '').toLowerCase().includes((studentQuery || '').toLowerCase()) ||
+    (s.department || '').toLowerCase().includes((studentQuery || '').toLowerCase())
   );
 
   return (
@@ -1579,8 +1579,8 @@ export default function AdminDashboard({
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {studentsFilter.map((st) => {
-                        const activeBorrowCount = borrowRecords.filter(r => r.studentRoll.toUpperCase() === st.rollNumber.toUpperCase() && r.status !== 'RETURNED').length;
-                        const unpaidFineSum = fines.filter(f => f.studentRoll.toUpperCase() === st.rollNumber.toUpperCase() && f.status === 'UNPAID').reduce((sum, f) => sum + f.amount, 0);
+                        const activeBorrowCount = borrowRecords.filter(r => (r.studentRoll || '').toUpperCase() === (st.rollNumber || '').toUpperCase() && r.status !== 'RETURNED').length;
+                        const unpaidFineSum = fines.filter(f => (f.studentRoll || '').toUpperCase() === (st.rollNumber || '').toUpperCase() && f.status === 'UNPAID').reduce((sum, f) => sum + f.amount, 0);
                         const isExpanded = selectedStudentRollForIssues === st.rollNumber;
                         
                         return (
@@ -1589,7 +1589,7 @@ export default function AdminDashboard({
                               <td className="py-4 px-6 font-mono font-bold text-slate-900">{st.rollNumber}</td>
                               <td className="py-4 px-6 font-medium text-slate-900 flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px] font-sans">
-                                  {st.name.substring(0, 2).toUpperCase()}
+                                  {(st.name || '').substring(0, 2).toUpperCase()}
                                 </div>
                                 {st.name}
                               </td>
@@ -1659,11 +1659,11 @@ export default function AdminDashboard({
 
                                     {/* LIST CORRESPONDING COPIES */}
                                     <div className="space-y-4">
-                                      {borrowRecords.filter(r => r.studentRoll.toUpperCase() === st.rollNumber.toUpperCase() && r.status !== 'RETURNED').length === 0 ? (
+                                      {borrowRecords.filter(r => (r.studentRoll || '').toUpperCase() === (st.rollNumber || '').toUpperCase() && r.status !== 'RETURNED').length === 0 ? (
                                         <p className="text-xs text-slate-400 py-3">No active physical books are checked out under this member registry.</p>
                                       ) : (
                                         <div className="divide-y divide-slate-100">
-                                          {borrowRecords.filter(r => r.studentRoll.toUpperCase() === st.rollNumber.toUpperCase() && r.status !== 'RETURNED').map(loan => {
+                                          {borrowRecords.filter(r => (r.studentRoll || '').toUpperCase() === (st.rollNumber || '').toUpperCase() && r.status !== 'RETURNED').map(loan => {
                                             const isOverdue = new Date() > new Date(loan.dueDate);
                                             return (
                                               <div key={loan.id} className="py-3 flex justify-between items-center text-xs">
@@ -3801,12 +3801,12 @@ export default function AdminDashboard({
 
       {reviewedStudent && (() => {
         // Find all loan history for this student
-        const studentLoans = borrowRecords.filter(r => r.studentRoll.toUpperCase() === reviewedStudent.rollNumber.toUpperCase());
+        const studentLoans = borrowRecords.filter(r => (r.studentRoll || '').toUpperCase() === (reviewedStudent.rollNumber || '').toUpperCase());
         const activeLoans = studentLoans.filter(r => r.status !== 'RETURNED');
         const activeLoansCount = activeLoans.length;
 
         // Find all fines for this student
-        const studentFines = fines.filter(f => f.studentRoll.toUpperCase() === reviewedStudent.rollNumber.toUpperCase());
+        const studentFines = fines.filter(f => (f.studentRoll || '').toUpperCase() === (reviewedStudent.rollNumber || '').toUpperCase());
         const unpaidFineSum = studentFines.filter(f => f.status === 'UNPAID').reduce((sum, f) => sum + f.amount, 0);
 
         const isClearForCertificate = activeLoansCount === 0 && unpaidFineSum === 0;
@@ -3846,7 +3846,7 @@ export default function AdminDashboard({
                     </div>
                     <div className="flex items-center gap-3 relative z-10">
                       <div className="w-12 h-12 rounded-full bg-blue-600 text-white font-black text-sm flex items-center justify-center shadow-inner tracking-wider shrink-0">
-                        {reviewedStudent.name.substring(0, 2).toUpperCase()}
+                        {(reviewedStudent.name || '').substring(0, 2).toUpperCase()}
                       </div>
                       <div>
                         <h3 className="text-xs font-black text-slate-800 leading-snug">{reviewedStudent.name}</h3>
