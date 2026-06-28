@@ -473,12 +473,13 @@ export async function getAllStudents(): Promise<(Student & { password?: string }
   try {
     const snap = await getDocs(collection(db, 'students'));
     const all = snap.docs.map(d => d.data() as (Student & { password?: string }));
-    // Filter out duplicates (roll format)
+    // Filter out duplicates and keep prefixed rolls
     const seenRolls = new Set<string>();
     return all.filter(s => {
-      if (s.rollNumber.includes('-')) return false; // skip UIDs
-      if (seenRolls.has(s.rollNumber)) return false;
-      seenRolls.add(s.rollNumber);
+      const roll = (s.rollNumber || '').trim().toUpperCase();
+      if (!roll || roll === 'ADMIN' || !isNaN(Number(roll))) return false;
+      if (seenRolls.has(roll)) return false;
+      seenRolls.add(roll);
       return true;
     });
   } catch (e) {
@@ -498,8 +499,27 @@ export async function saveStudent(student: Student & { password?: string }): Pro
 
 export async function deleteStudent(roll: string): Promise<void> {
   try {
-    await deleteDoc(doc(db, 'students', roll));
-    await deleteDoc(doc(db, 'students', `CST-${roll}`));
+    const r = roll.trim();
+    const upper = r.toUpperCase();
+    const lower = r.toLowerCase();
+    
+    // Delete base forms
+    await deleteDoc(doc(db, 'students', r));
+    await deleteDoc(doc(db, 'students', upper));
+    await deleteDoc(doc(db, 'students', lower));
+    
+    // Delete CST-prefixed forms
+    await deleteDoc(doc(db, 'students', `CST-${r}`));
+    await deleteDoc(doc(db, 'students', `CST-${upper}`));
+    await deleteDoc(doc(db, 'students', `cst-${lower}`));
+    
+    // If it starts with CST- or similar prefixes, also delete the raw suffixes
+    if (upper.startsWith('CST-') || upper.startsWith('CSE-') || upper.startsWith('BBA-') || upper.startsWith('HIS-')) {
+      const bare = r.substring(4);
+      await deleteDoc(doc(db, 'students', bare));
+      await deleteDoc(doc(db, 'students', bare.toUpperCase()));
+      await deleteDoc(doc(db, 'students', bare.toLowerCase()));
+    }
   } catch (e) {
     handleFirestoreError(e, OperationType.DELETE, 'students/' + roll);
   }

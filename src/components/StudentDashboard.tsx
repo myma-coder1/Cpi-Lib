@@ -4,6 +4,7 @@ import {
   AlertCircle, RefreshCw, Coins, Image as ImageIcon, Upload, Trash2, BookOpen, Eye 
 } from 'lucide-react';
 import { BorrowRecord, Fine, GalleryItem } from '../types.js';
+import { BookCard } from './BookCard';
 
 interface StudentDashboardProps {
   user: any;
@@ -709,68 +710,17 @@ export default function StudentDashboard({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
               {books.filter(b => (user.wishlist || []).includes(b.id)).map(book => (
-                <div key={book.id} className="border border-slate-200 rounded-2xl p-4 flex flex-col justify-between bg-slate-50/50 hover:bg-white hover:shadow-md transition-all duration-200 group">
-                  <div>
-                    {/* Cover Thumbnail */}
-                    <div className="aspect-[4/5] bg-slate-100 rounded-xl mb-4 overflow-hidden relative cursor-pointer" onClick={() => { setSelectedBookId(book.id); setCurrentView('book-detail'); }}>
-                      <img 
-                        src={book.coverUrl || `https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200`} 
-                        alt={book.title} 
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200';
-                        }}
-                      />
-                      <span className="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-xs text-slate-800 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border border-slate-100 shadow-xs font-mono">
-                        {book.format}
-                      </span>
-                    </div>
-
-                    <h4 
-                      className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-xs line-clamp-1 cursor-pointer font-sans"
-                      onClick={() => { setSelectedBookId(book.id); setCurrentView('book-detail'); }}
-                    >
-                      {book.title}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 font-mono mt-1 line-clamp-1">{book.author}</p>
-                    <span className="inline-block bg-slate-100 border border-slate-200 text-slate-700 text-[8.5px] font-bold px-2 py-0.5 rounded-md mt-2 font-mono">
-                      {book.category}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-slate-150 grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => { setSelectedBookId(book.id); setCurrentView('book-detail'); }}
-                      className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[9px] uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-colors font-sans"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Detail
-                    </button>
-                    {book.format !== 'E-Book' ? (
-                      <button
-                        onClick={() => handleBorrowFromWishlist(book.id)}
-                        className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-750 text-white font-bold text-[9px] uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-colors"
-                      >
-                        <BookOpen className="w-3.5 h-3.5" /> Borrow
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => { setSelectedBookId(book.id); setCurrentView('book-detail'); }}
-                        className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-750 text-white font-bold text-[9px] uppercase tracking-wider py-2 rounded-lg cursor-pointer transition-colors"
-                      >
-                        <BookOpen className="w-3.5 h-3.5" /> E-Book
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleRemoveWishlist(book.id)}
-                      className="col-span-2 flex items-center justify-center gap-1 text-slate-400 hover:text-rose-600 font-semibold text-[9px] uppercase tracking-wider py-1 rounded-lg border border-transparent hover:border-rose-100 hover:bg-rose-50 cursor-pointer transition-all"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 shrink-0" /> Remove Book
-                    </button>
-                  </div>
-                </div>
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  onViewDetails={(id) => { setSelectedBookId(id); setCurrentView('book-detail'); }}
+                  isWishlisted={true}
+                  onWishlistToggle={() => handleRemoveWishlist(book.id)}
+                  onActionClick={book.format !== 'E-Book' ? () => handleBorrowFromWishlist(book.id) : undefined}
+                  actionText={book.format !== 'E-Book' ? 'Borrow Book' : undefined}
+                />
               ))}
             </div>
           )}

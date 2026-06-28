@@ -1,5 +1,5 @@
 {
-  "name": "ScholarLib",
+  "name": "CpiLib",
   "description": "A professional library management system featuring catalog search, ebooks, borrow/return systems, fine tracking, and admin controls.",
   "requestFramePermissions": [],
   "majorCapabilities": [

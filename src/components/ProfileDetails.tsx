@@ -224,7 +224,7 @@ export default function ProfileDetails({ user, onUpdateUser, setCurrentView }: P
     doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(10.5);
-    doc.text('CHATTOGRAM POLYTECHNIC INSTITUTE', 60, 11, { align: 'center' });
+    doc.text('Chattogram Polytechnic Institute', 60, 11, { align: 'center' });
     
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(7.5);
@@ -390,7 +390,7 @@ export default function ProfileDetails({ user, onUpdateUser, setCurrentView }: P
                 {/* Headers */}
                 <div className="text-center mt-3 z-10">
                   <h4 className="text-[10px] sm:text-[13px] font-black text-[#13388a] uppercase tracking-tight leading-normal font-sans">
-                    CHATTOGRAM POLYTECHNIC INSTITUTE
+                    Chattogram Polytechnic Institute
                   </h4>
                   <p className="text-[7.5px] sm:text-[8.5px] text-slate-500 font-extrabold leading-none tracking-wide mt-0.5">
                     Nasirabad, Chattogram

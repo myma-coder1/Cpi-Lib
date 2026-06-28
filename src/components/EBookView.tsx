@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Search, ArrowLeft, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Book } from '../types.js';
+import { BookCard } from './BookCard';
 
 interface EBookViewProps {
   books: Book[];
@@ -449,45 +450,14 @@ export default function EBookView({
           </div>
 
           {/* Grid list of Digital books with premium card radius and visual style */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6" id="ebook-index-grid">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6" id="ebook-index-grid">
             {ebooksList.map(book => (
-              <div 
-                key={book.id} 
-                onClick={() => handleBookSelect(book)}
-                className="group cursor-pointer flex flex-col justify-between hover:border-slate-350 transition-all text-left bg-white border border-slate-200 p-4 rounded-[20px] shadow-xs hover:shadow-md hover:-translate-y-0.5 duration-200"
-                id={`ebook-${book.id}`}
-              >
-                <div>
-                  <div className="relative w-full h-[180px] bg-slate-50 border border-slate-100 rounded-xl p-2 overflow-hidden shadow-xs group-hover:border-blue-300 transition-all flex items-center justify-center mb-3">
-                    <img 
-                      src={book.imageUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600'} 
-                      alt={book.title} 
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-contain object-center group-hover:scale-[1.02] transition-transform duration-250"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600';
-                      }}
-                    />
-                    <span className="absolute top-2 left-2 bg-emerald-50 border border-emerald-200 text-emerald-805 font-sans font-bold text-[8.5px] tracking-wider px-2 py-0.5 rounded-lg uppercase leading-none shadow-xs">
-                      Read online
-                    </span>
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase block">{book.category}</span>
-                  <h4 className="font-sans font-bold text-xs text-slate-900 group-hover:text-[#1E40AF] mt-1.5 line-clamp-2 leading-snug transition-colors">
-                    {book.title}
-                  </h4>
-                  <p className="text-[10px] text-slate-500 mt-1 font-medium">Professor {book.author}</p>
-                </div>
-                
-                <div className="mt-3.5 border-t border-slate-100 pt-2.5 flex justify-between items-center text-[9px] font-mono text-slate-400">
-                  <span>ISBN: {book.isbn}</span>
-                  {book.pdfUrl ? (
-                    <span className="text-emerald-600 font-bold text-[8px] uppercase">PDF Link ✓</span>
-                  ) : book.ebookContentText ? (
-                    <span className="text-[#1E40AF] font-bold text-[8px] uppercase font-sans">Text ✓</span>
-                  ) : null}
-                </div>
-              </div>
+              <BookCard
+                key={book.id}
+                book={book}
+                onViewDetails={() => handleBookSelect(book)}
+                badgeText="Digital E-Book"
+              />
             ))}
 
             {ebooksList.length === 0 && (

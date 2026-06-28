@@ -646,7 +646,7 @@ export async function getExpressApp() {
   });
 
   // API - Delete Student (Admin)
-  app.delete('/api/students/:roll', async (req, res) => {
+  app.delete('/api/students/:roll(*)', async (req, res) => {
     try {
       const normalizedRoll = req.params.roll.toUpperCase();
       const exists = await getStudentByRoll(normalizedRoll);
@@ -663,7 +663,7 @@ export async function getExpressApp() {
   });
 
   // API - Fetch a student profile
-  app.get('/api/students/:roll', async (req, res) => {
+  app.get('/api/students/:roll(*)', async (req, res) => {
     try {
       const student = await getDeterministicStudentAsync(req.params.roll);
       if (!student) return res.status(404).json({ error: 'Student not found' });
@@ -675,7 +675,7 @@ export async function getExpressApp() {
   });
 
   // API - Update student profile (change photo / pass / name / roll etc)
-  app.put('/api/students/:roll', async (req, res) => {
+  app.put('/api/students/:roll(*)', async (req, res) => {
     try {
       const oldRoll = req.params.roll.toUpperCase().trim();
       const student = await getDeterministicStudentAsync(oldRoll);
@@ -734,7 +734,7 @@ export async function getExpressApp() {
   });
 
   // API - Get borrow records for student
-  app.get('/api/borrow-history/:roll', async (req, res) => {
+  app.get('/api/borrow-history/:roll(*)', async (req, res) => {
     try {
       await refreshBorrowRecordsAsync();
       const borrows = await getAllBorrows();
@@ -770,7 +770,7 @@ export async function getExpressApp() {
   });
 
   // API - Get student fines
-  app.get('/api/fines/:roll', async (req, res) => {
+  app.get('/api/fines/:roll(*)', async (req, res) => {
     try {
       const list = await getAllFines();
       const filtered = list.filter(f => f.studentRoll.toUpperCase() === req.params.roll.toUpperCase());

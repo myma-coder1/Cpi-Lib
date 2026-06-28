@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Book } from '../types.js';
+import { BookCard } from './BookCard';
 
 interface BookDetailViewProps {
   bookId: string;
@@ -499,44 +500,13 @@ export default function BookDetailView({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 select-none animate-fade-in">
-            {relatedBooks.map((relBook) => {
-              const relRating = getSimulatedRating(relBook.isbn);
-              return (
-                <div 
-                  key={relBook.id}
-                  onClick={() => navigateRelated(relBook.id)}
-                  className="group cursor-pointer text-left bg-white border border-slate-205 hover:border-slate-350 p-4 rounded-xl hover:shadow-md transition-all flex flex-col justify-between"
-                  id={`related-${relBook.id}`}
-                >
-                  <div>
-                    <div className="relative w-full h-[220px] bg-slate-50/55 border border-slate-200 p-3 overflow-hidden shadow-xs group-hover:scale-[1.01] transition-all mb-3 flex items-center justify-center rounded-lg">
-                      <img 
-                        src={relBook.imageUrl || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=800'} 
-                        alt={relBook.title}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-contain object-center rounded-xs"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=800';
-                        }}
-                      />
-                    </div>
-                    <span className="text-[9.5px] uppercase font-bold text-[#1E40AF] block">{relBook.category}</span>
-                    <h4 className="font-sans font-bold text-xs text-slate-800 mt-1 group-hover:text-[#1E40AF] line-clamp-2 truncate transition-colors leading-tight">
-                      {relBook.title}
-                    </h4>
-                  </div>
-                  
-                  <div className="mt-3.5 pt-2 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400 select-none">
-                    <span>By {relBook.author.split(' ').pop()}</span>
-                    <div className="flex items-center text-amber-500 font-bold gap-0.5">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      <span>{relRating.toFixed(1)}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {relatedBooks.map((relBook) => (
+              <BookCard
+                key={relBook.id}
+                book={relBook}
+                onViewDetails={navigateRelated}
+              />
+            ))}
           </div>
         </section>
       )}

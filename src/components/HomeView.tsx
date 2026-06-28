@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Librarian, GalleryItem, LibraryStatus } from '../types.js';
+import { BookCard } from './BookCard';
 
 interface HomeViewProps {
   books: Book[];
@@ -226,7 +227,8 @@ export default function HomeView({
   };
 
   return (
-    <div className="font-sans text-[#334155] bg-slate-50/50 pb-16 animate-fade-in" id="home-view">
+    <>
+      <div className="font-sans text-[#334155] bg-slate-50/50 pb-16 animate-fade-in" id="home-view">
       
       {/* 1. Hero Search Banner - Bounded Container with Modern Glass Backdrop & Dynamic Slides */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8" id="hero-banner-container">
@@ -819,54 +821,24 @@ export default function HomeView({
         </div>
       </section>
 
-      {/* 3. Home View Expanded Book Collections (5 Curated Shelves & Leaderboards) */}
-      
       {/* 3.1 New Arrivals Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14" id="new-arrivals-section">
         <div className="flex items-end justify-between mb-8 border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-blue-600 pl-3 h-max">New Arrivals Shelf (নতুন বইয়ের সমাহার)</h2>
-            <p className="text-xs text-slate-500 mt-1">Acquired textbooks and research resources for the current academic session.</p>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              নতুন বইয়ের সমাহার <span className="text-slate-400 font-medium font-sans">| New Arrivals Shelf</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">সম্পতি লাইব্রেরি ক্যাটালগে যুক্ত হওয়া নতুন শিক্ষাবর্ষের আকর্ষনীয় বইসমূহ।</p>
           </div>
-          <span className="text-xs font-mono font-bold text-blue-600 uppercase bg-blue-50 border border-blue-100 px-3 py-1 rounded-md">CPI-2026 Session</span>
         </div>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-          {newArrivalsList.slice(0, limitNewArrivals).map((book, idx) => (
-            <div 
-              key={book.id}
-              onClick={() => viewBookDetails(book.id)}
-              className="bg-white border border-slate-200 hover:border-blue-400 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left w-full"
-            >
-              <div>
-                <div className="relative w-full h-[220px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
-                  <img 
-                    src={book.imageUrl} 
-                    alt={book.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-                  />
-                  <span className="absolute top-2.5 left-2.5 bg-blue-600 text-white font-sans font-bold text-[8px] px-2 py-0.5 rounded uppercase tracking-wider">
-                    Arrival
-                  </span>
-                </div>
-                <span className="text-[9.5px] font-bold text-blue-650 tracking-wide uppercase inline-block mb-1">
-                  {book.category}
-                </span>
-                <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
-                  {book.title}
-                </h4>
-                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
-              </div>
-              <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-650">
-                <span className="text-[8.5px] font-bold text-slate-400 uppercase font-mono">{book.format}</span>
-                {book.copiesCount > 0 ? (
-                  <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 rounded">Available</span>
-                ) : (
-                  <span className="text-[9px] font-extrabold text-[#F59E0B] bg-amber-50 px-2 rounded">Borrowed</span>
-                )}
-              </div>
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {newArrivalsList.slice(0, limitNewArrivals).map((book) => (
+            <BookCard 
+              key={book.id} 
+              book={book} 
+              onViewDetails={viewBookDetails} 
+              badgeText="New Arrival" 
+            />
           ))}
         </div>
         {newArrivalsList.length > limitNewArrivals && (
@@ -894,101 +866,37 @@ export default function HomeView({
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">চলতি মাসের লাইব্রেরি রেকর্ড অনুযায়ী শিক্ষার্থীদের মাঝে সবচেয়ে বেশি প্রচারিত ও পঠিত শীর্ষ ১০ টি অ্যাকাডেমিক টেক্সটবই।</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {top10BorrowedList.map((book, idx) => (
-              <div 
-                key={book.id}
-                onClick={() => viewBookDetails(book.id)}
-                className="bg-white border border-slate-200 rounded-[20px] p-4 flex flex-col justify-between group hover:shadow-lg hover:border-blue-400 transition-all duration-300 cursor-pointer relative overflow-hidden"
-              >
-                {/* Floating Rank Badge */}
-                <div className={`absolute top-0 right-0 w-12 h-12 flex items-center justify-center font-mono font-black text-sm rounded-bl-3xl ${idx < 3 ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xs' : 'bg-slate-100 text-slate-600'}`}>
-                  {idx + 1 < 10 ? `0${idx + 1}` : idx + 1}
-                </div>
-
-                <div>
-                  {/* Thumbnail Cover */}
-                  <div className="aspect-[4/5] bg-slate-50 rounded-xl mb-4 overflow-hidden relative border border-slate-100 flex items-center justify-center p-2 select-none">
-                    <img 
-                      src={book.imageUrl} 
-                      alt={book.title} 
-                      referrerPolicy="no-referrer"
-                      className="h-[150px] object-contain group-hover:scale-105 transition-transform duration-300"
-                      onError={e => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200';
-                      }}
-                    />
-                  </div>
-
-                  <span className="text-[8.5px] font-mono font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    ★ Monthly Rank #{idx + 1}
-                  </span>
-
-                  <h4 className="font-bold text-slate-900 text-xs mt-3 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                    {book.title}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">By {book.author}</p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <div className="flex items-center gap-1 text-slate-650 font-medium">
-                    <span className="text-blue-600 font-extrabold font-mono">{book.borrowCount}</span>
-                    <span>Borrows</span>
-                  </div>
-                  <span className="text-[8px] text-slate-400 font-bold uppercase font-mono">{book.format}</span>
-                </div>
-              </div>
+              <BookCard 
+                key={book.id} 
+                book={book} 
+                onViewDetails={viewBookDetails} 
+                rankIndex={idx} 
+              />
             ))}
           </div>
         </div>
       </section>
 
       {/* 3.3 Trending Books Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-left" id="trending-books-section">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14" id="trending-books-section">
         <div className="flex items-end justify-between mb-8 border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-emerald-500 pl-3 h-max">Trending Books (জনপ্রিয় বইসমূহ)</h2>
-            <p className="text-xs text-slate-500 mt-1">Highlighted and widely discussed STEM and humanities studies.</p>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              জনপ্রিয় বইসমূহ <span className="text-slate-400 font-medium font-sans">| Trending Books</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">আজকের সর্বাধিক আলোচিত বিজ্ঞান, প্রযুক্তি ও সাধারণ বিষয়াবলীর বইসমূহ।</p>
           </div>
-          <span className="text-xs font-mono font-bold text-emerald-600 uppercase bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-md">Live read rate</span>
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-          {trendingBooksList.slice(0, limitTrending).map((book, idx) => (
-            <div 
-              key={book.id}
-              onClick={() => viewBookDetails(book.id)}
-              className="bg-white border border-slate-200 hover:border-emerald-400 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left w-full"
-            >
-              <div>
-                <div className="relative w-full h-[220px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
-                  <img 
-                    src={book.imageUrl} 
-                    alt={book.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-                  />
-                  <span className="absolute top-2.5 right-2.5 bg-emerald-600 text-white font-sans font-bold text-[8px] px-2 py-0.5 rounded uppercase tracking-wider">
-                    98% Match
-                  </span>
-                </div>
-                <span className="text-[9.5px] font-bold text-emerald-650 tracking-wide uppercase inline-block mb-1">
-                  {book.category}
-                </span>
-                <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-emerald-600 transition-colors">
-                  {book.title}
-                </h4>
-                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
-              </div>
-              <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-650">
-                <span className="text-[8.5px] font-bold text-slate-400 uppercase font-mono">{book.format}</span>
-                {book.copiesCount > 0 ? (
-                  <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 rounded">Active</span>
-                ) : (
-                  <span className="text-[9px] font-extrabold text-[#F59E0B] bg-amber-50 px-2 rounded">Reserved</span>
-                )}
-              </div>
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {trendingBooksList.slice(0, limitTrending).map((book) => (
+            <BookCard 
+              key={book.id} 
+              book={book} 
+              onViewDetails={viewBookDetails} 
+              badgeText="Trending" 
+            />
           ))}
         </div>
         {trendingBooksList.length > limitTrending && (
@@ -1004,52 +912,22 @@ export default function HomeView({
       </section>
 
       {/* 3.4 Recently Added Section */}
-      <section className="bg-slate-50/50 py-16 text-left border-y border-slate-200/60" id="recently-added-section">
+      <section className="bg-slate-50/50 py-16 text-left" id="recently-added-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-purple-500 pl-3 h-max">Recently Added (সদ্য যুক্ত বই)</h2>
-              <p className="text-xs text-slate-500 mt-1">Academic resources and publications registered into catalog during the past 30 days.</p>
-            </div>
-            <span className="text-xs font-mono font-bold text-purple-650 bg-purple-50 border border-purple-100 px-3 py-1 rounded-md">Catalog Sync</span>
+          <div className="mb-12 border-b border-slate-150 pb-4">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              সম্প্রতি সংযোজিত <span className="text-slate-400 font-medium font-sans">| Recently Added</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">লাইব্রেরি ক্যাটালগে সম্প্রতি তালিকাভুক্ত হওয়া একাডেমিক রিসার্চ ও রেফারেন্স বুক কালেকশন।</p>
           </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-            {recentlyAddedList.slice(0, limitRecentlyAdded).map((book, idx) => (
-              <div 
-                key={book.id}
-                onClick={() => viewBookDetails(book.id)}
-                className="bg-white border border-slate-200 hover:border-purple-400 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left w-full"
-              >
-                <div>
-                  <div className="relative w-full h-[220px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
-                    <img 
-                      src={book.imageUrl} 
-                      alt={book.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-                    />
-                    <span className="absolute top-2.5 right-2.5 bg-purple-600 text-white font-sans font-bold text-[8px] px-2 py-0.5 rounded uppercase tracking-wider">
-                      Added
-                    </span>
-                  </div>
-                  <span className="text-[9.5px] font-bold text-purple-650 tracking-wide uppercase inline-block mb-1">
-                    {book.category}
-                  </span>
-                  <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-purple-600 transition-colors">
-                    {book.title}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
-                </div>
-                <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-655">
-                  <span className="text-[8.5px] font-bold text-slate-400 uppercase font-mono">{book.format}</span>
-                  {book.copiesCount > 0 ? (
-                    <span className="text-[9px] font-extrabold text-purple-700 bg-purple-50 px-2 rounded">New</span>
-                  ) : (
-                    <span className="text-[9px] font-extrabold text-slate-400 bg-slate-105 px-2 rounded">Hold</span>
-                  )}
-                </div>
-              </div>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {recentlyAddedList.slice(0, limitRecentlyAdded).map((book) => (
+              <BookCard 
+                key={book.id} 
+                book={book} 
+                onViewDetails={viewBookDetails} 
+                badgeText="Recently Added" 
+              />
             ))}
           </div>
           {recentlyAddedList.length > limitRecentlyAdded && (
@@ -1066,51 +944,23 @@ export default function HomeView({
       </section>
 
       {/* 3.5 Recommended Reads Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-left" id="recommended-reads-section">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14" id="recommended-section">
         <div className="flex items-end justify-between mb-8 border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-base font-bold uppercase tracking-wider text-slate-900 border-l-4 border-indigo-600 pl-3 h-max">Recommended Reads (প্রস্তাবিত বইসমূহ)</h2>
-            <p className="text-xs text-slate-500 mt-1">Curated academic studies and publications manually selected by department advisors.</p>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              প্রস্তাবিত বইসমূহ <span className="text-slate-400 font-medium font-sans">| Recommended Reads</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">আমাদের মডারেটরদের দ্বারা নির্বাচিত শীর্ষ একাডেমিক এবং ক্যারিয়ার সহায়ক বইয়ের তালিকা।</p>
           </div>
-          <span className="text-xs font-mono font-bold text-indigo-650 uppercase bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-md">Advisors choice</span>
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-          {recommendedList.slice(0, limitRecommended).map((book, idx) => (
-            <div 
-              key={book.id}
-              onClick={() => viewBookDetails(book.id)}
-              className="bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer text-left w-full"
-            >
-              <div>
-                <div className="relative w-full h-[220px] bg-[#f8fafc] rounded-xl p-3 overflow-hidden border border-slate-100 flex items-center justify-center mb-4 select-none">
-                  <img 
-                    src={book.imageUrl} 
-                    alt={book.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-                  />
-                  <span className="absolute top-2.5 right-2.5 bg-indigo-600 text-white font-sans font-bold text-[8px] px-2 py-0.5 rounded uppercase tracking-wider">
-                    Excellent Choice
-                  </span>
-                </div>
-                <span className="text-[9.5px] font-bold text-indigo-650 tracking-wide uppercase inline-block mb-1">
-                  {book.category}
-                </span>
-                <h4 className="font-sans font-bold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
-                  {book.title}
-                </h4>
-                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">By {book.author}</p>
-              </div>
-              <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-650">
-                <span className="text-[8.5px] font-bold text-slate-400 uppercase font-mono">{book.format}</span>
-                {book.copiesCount > 0 ? (
-                  <span className="text-[9px] font-extrabold text-indigo-700 bg-indigo-50 px-2 rounded">Curated</span>
-                ) : (
-                  <span className="text-[9px] font-extrabold text-[#F59E0B] bg-amber-50 px-2 rounded">Check shelf</span>
-                )}
-              </div>
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {recommendedList.slice(0, limitRecommended).map((book) => (
+            <BookCard 
+              key={book.id} 
+              book={book} 
+              onViewDetails={viewBookDetails} 
+              badgeText="Recommended" 
+            />
           ))}
         </div>
         {recommendedList.length > limitRecommended && (
@@ -1743,6 +1593,7 @@ export default function HomeView({
           </div>
         </div>
       </section>
+      </div>
 
       {/* ================= NOTICE DETAILED MODAL POPUP ================= */}
       <AnimatePresence>
@@ -1954,6 +1805,6 @@ export default function HomeView({
         )}
       </AnimatePresence>
 
-    </div>
+    </>
   );
 }

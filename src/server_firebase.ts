@@ -526,12 +526,30 @@ export async function saveStudent(student: Student & { password?: string }): Pro
 }
 
 export async function deleteStudent(roll: string): Promise<void> {
-  const rollNormalized = roll.trim().toUpperCase();
-  const docRef = doc(db, 'students', rollNormalized);
   try {
-    await deleteDoc(docRef);
+    const r = roll.trim();
+    const upper = r.toUpperCase();
+    const lower = r.toLowerCase();
+    
+    // Delete base forms
+    await deleteDoc(doc(db, 'students', r));
+    await deleteDoc(doc(db, 'students', upper));
+    await deleteDoc(doc(db, 'students', lower));
+    
+    // Delete CST-prefixed forms
+    await deleteDoc(doc(db, 'students', `CST-${r}`));
+    await deleteDoc(doc(db, 'students', `CST-${upper}`));
+    await deleteDoc(doc(db, 'students', `cst-${lower}`));
+    
+    // If it starts with CST- or similar prefixes, also delete the raw suffixes
+    if (upper.startsWith('CST-') || upper.startsWith('CSE-') || upper.startsWith('BBA-') || upper.startsWith('HIS-')) {
+      const bare = r.substring(4);
+      await deleteDoc(doc(db, 'students', bare));
+      await deleteDoc(doc(db, 'students', bare.toUpperCase()));
+      await deleteDoc(doc(db, 'students', bare.toLowerCase()));
+    }
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `students/${rollNormalized}`);
+    handleFirestoreError(error, OperationType.DELETE, `students/${roll}`);
   }
 }
 

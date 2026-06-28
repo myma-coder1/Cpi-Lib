@@ -139,8 +139,8 @@ export function setupFetchInterceptor() {
           return jsonResponse({ message: 'Student registered successfully', student: newStudent }, 201);
         }
       }
-      if (pathname.startsWith('/api/students/') && parts.length === 3) {
-        const roll = parts[2];
+      if (pathname.startsWith('/api/students/') && pathname !== '/api/students') {
+        const roll = decodeURIComponent(pathname.substring('/api/students/'.length));
         if (method === 'GET') {
           const student = await fb.getStudentByRoll(roll);
           if (student) return jsonResponse(student);
@@ -420,8 +420,8 @@ export function setupFetchInterceptor() {
           return jsonResponse(borrows);
         }
       }
-      if (pathname.startsWith('/api/borrow-history/') && parts.length === 3) {
-        const roll = parts[2];
+      if (pathname.startsWith('/api/borrow-history/') && pathname !== '/api/borrow-history/') {
+        const roll = decodeURIComponent(pathname.substring('/api/borrow-history/'.length));
         const borrows = await fb.getAllBorrows();
         const studentBorrows = borrows.filter(b => b.studentRoll === roll);
         return jsonResponse(studentBorrows);
@@ -434,8 +434,8 @@ export function setupFetchInterceptor() {
         const fines = await fb.getAllFines();
         return jsonResponse(fines);
       }
-      if (pathname.startsWith('/api/fines/') && parts.length === 3) {
-        const roll = parts[2];
+      if (pathname.startsWith('/api/fines/') && !pathname.startsWith('/api/fines/pay/') && pathname !== '/api/fines/') {
+        const roll = decodeURIComponent(pathname.substring('/api/fines/'.length));
         const fines = await fb.getAllFines();
         return jsonResponse(fines.filter(f => f.studentRoll === roll));
       }
@@ -475,44 +475,64 @@ export function setupFetchInterceptor() {
       // -------------------------------------------------------------
       // 13. NOTICES BOARD
       // -------------------------------------------------------------
-      if (pathname === '/api/notices') {
-        const notices = await fb.getAllNotices();
-        return jsonResponse(notices);
-      }
-      if (pathname === '/api/admin/notices') {
+      if (pathname === '/api/notices' || pathname === '/api/admin/notices') {
+        if (method === 'GET') {
+          const notices = await fb.getAllNotices();
+          return jsonResponse(notices);
+        }
         if (method === 'POST') {
-          const notice = { ...requestBody, id: requestBody.id || `notice-${Date.now()}`, createdAt: new Date().toISOString() };
+          const notice = { ...requestBody, id: requestBody?.id || `notice-${Date.now()}`, createdAt: new Date().toISOString() };
           await fb.saveNotice(notice);
           return jsonResponse({ message: 'Notice board published successfully.', notice }, 201);
         }
       }
-      if (pathname.startsWith('/api/admin/notices/') && parts.length === 4) {
-        const id = parts[3];
+      if ((pathname.startsWith('/api/notices/') && pathname !== '/api/notices') || (pathname.startsWith('/api/admin/notices/') && pathname !== '/api/admin/notices')) {
+        const id = decodeURIComponent(pathname.substring(pathname.includes('/admin/') ? '/api/admin/notices/'.length : '/api/notices/'.length));
+        if (method === 'GET') {
+          const notice = await fb.getAllNotices().then(all => all.find(n => n.id === id));
+          if (notice) return jsonResponse(notice);
+          return errorResponse('Notice not found.', 404);
+        }
+        if (method === 'PUT' || method === 'POST') {
+          const notice = { ...requestBody, id, updatedAt: new Date().toISOString() };
+          await fb.saveNotice(notice);
+          return jsonResponse({ message: 'Notice updated successfully', notice });
+        }
         if (method === 'DELETE') {
           await fb.deleteNotice(id);
-          return jsonResponse({ message: 'Notice deleted successfully' });
+          return jsonResponse({ success: true, message: 'Notice deleted successfully' });
         }
       }
 
       // -------------------------------------------------------------
       // 14. HERO CAROUSEL SLIDES
       // -------------------------------------------------------------
-      if (pathname === '/api/hero-slides') {
-        const slides = await fb.getAllHeroSlides();
-        return jsonResponse(slides);
-      }
-      if (pathname === '/api/admin/hero-slides') {
+      if (pathname === '/api/hero-slides' || pathname === '/api/admin/hero-slides') {
+        if (method === 'GET') {
+          const slides = await fb.getAllHeroSlides();
+          return jsonResponse(slides);
+        }
         if (method === 'POST') {
-          const slide = { ...requestBody, id: requestBody.id || `slide-${Date.now()}`, createdAt: new Date().toISOString() };
+          const slide = { ...requestBody, id: requestBody?.id || `slide-${Date.now()}`, createdAt: new Date().toISOString() };
           await fb.saveHeroSlide(slide);
           return jsonResponse({ message: 'Hero slide saved successfully.', slide }, 201);
         }
       }
-      if (pathname.startsWith('/api/admin/hero-slides/') && parts.length === 4) {
-        const id = parts[3];
+      if ((pathname.startsWith('/api/hero-slides/') && pathname !== '/api/hero-slides') || (pathname.startsWith('/api/admin/hero-slides/') && pathname !== '/api/admin/hero-slides')) {
+        const id = decodeURIComponent(pathname.substring(pathname.includes('/admin/') ? '/api/admin/hero-slides/'.length : '/api/hero-slides/'.length));
+        if (method === 'GET') {
+          const slide = await fb.getAllHeroSlides().then(all => all.find(s => s.id === id));
+          if (slide) return jsonResponse(slide);
+          return errorResponse('Hero slide not found.', 404);
+        }
+        if (method === 'PUT' || method === 'POST') {
+          const slide = { ...requestBody, id, updatedAt: new Date().toISOString() };
+          await fb.saveHeroSlide(slide);
+          return jsonResponse({ message: 'Hero slide updated successfully', slide });
+        }
         if (method === 'DELETE') {
           await fb.deleteHeroSlide(id);
-          return jsonResponse({ message: 'Hero slide removed successfully.' });
+          return jsonResponse({ success: true, message: 'Hero slide removed successfully.' });
         }
       }
 

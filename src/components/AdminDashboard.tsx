@@ -444,6 +444,7 @@ export default function AdminDashboard({
 
   // Dynamic user / student management states
   const [showAddMember, setShowAddMember] = useState(false);
+  const [editingMemberRoll, setEditingMemberRoll] = useState<string | null>(null);
   const [memberForm, setMemberForm] = useState({
     name: '',
     password: 'student123',
@@ -813,14 +814,22 @@ export default function AdminDashboard({
     }
     
     try {
-      const res = await fetch('/api/students', {
-        method: 'POST',
+      const isEdit = !!editingMemberRoll;
+      const url = isEdit ? `/api/students/${encodeURIComponent(editingMemberRoll)}` : '/api/students';
+      const method = isEdit ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(memberForm)
       });
       if (res.ok) {
-        alert("Student registered into library roster successfully! Roll automatically formatted with appropriate indicators.");
+        if (isEdit) {
+          alert("Student profile updated successfully!");
+        } else {
+          alert("Student registered into library roster successfully! Roll automatically formatted with appropriate indicators.");
+        }
         setShowAddMember(false);
+        setEditingMemberRoll(null);
         setMemberForm({
           name: '',
           password: 'student123',
@@ -831,12 +840,24 @@ export default function AdminDashboard({
         loadAdminStats();
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to register student.");
+        alert(err.error || `Failed to ${isEdit ? 'update' : 'register'} student.`);
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to connect to backend for student registration.");
+      alert(`Failed to connect to backend for student ${editingMemberRoll ? 'update' : 'registration'}.`);
     }
+  };
+
+  const handleStartEditMember = (st: Student) => {
+    setMemberForm({
+      name: st.name || '',
+      password: st.password || 'student123',
+      rollNumber: st.rollNumber || '',
+      department: st.department || 'CST',
+      semester: st.semester || 1
+    });
+    setEditingMemberRoll(st.rollNumber);
+    setShowAddMember(true);
   };
 
   const handleDeleteMember = async (rollNumber: string) => {
@@ -1012,7 +1033,7 @@ export default function AdminDashboard({
           <div className="relative flex w-64 max-w-xs flex-col bg-slate-900 text-slate-300 shadow-2xl" id="mobile-sidebar-panel">
             {/* Close button in drawer */}
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
-              <span className="text-white font-bold text-xs uppercase tracking-wider">ScholarLib Console</span>
+              <span className="text-white font-bold text-xs uppercase tracking-wider">CpiLib Console</span>
               <button 
                 onClick={() => setIsMobileSidebarOpen(false)}
                 className="p-1.5 rounded-lg hover:bg-slate-850 text-slate-400 hover:text-white transition-colors cursor-pointer"
@@ -1095,8 +1116,8 @@ export default function AdminDashboard({
               </div>
               {!isSidebarCollapsed && (
                 <div className="transition-all duration-200 text-left">
-                  <h1 className="text-sm font-bold text-white tracking-wide uppercase">ScholarLib</h1>
-                  <p className="text-[10px] text-slate-500 font-mono">CST Technical Suite</p>
+                  <h1 className="text-sm font-bold text-white tracking-wide uppercase">CpiLib</h1>
+                  <p className="text-[10px] text-slate-500 font-mono">CPI Technical Suite</p>
                 </div>
               )}
             </div>
@@ -1174,7 +1195,7 @@ export default function AdminDashboard({
           {!isSidebarCollapsed && (
             <div className="transition-all duration-200 text-left">
               <p className="text-xs font-semibold text-white">Librarian Admin</p>
-              <p className="text-[10px] text-slate-400 font-mono">ScholarLib Manager</p>
+              <p className="text-[10px] text-slate-400 font-mono">CpiLib Manager</p>
             </div>
           )}
         </div>
@@ -1442,7 +1463,17 @@ export default function AdminDashboard({
 
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => setShowAddMember(true)}
+                    onClick={() => {
+                      setEditingMemberRoll(null);
+                      setMemberForm({
+                        name: '',
+                        password: 'student123',
+                        rollNumber: '',
+                        department: 'CST',
+                        semester: 1
+                      });
+                      setShowAddMember(true);
+                    }}
                     className="h-12 rounded-[14px] text-white font-semibold bg-gradient-to-r from-[#1E40AF] to-[#3B82F6] hover:brightness-[106%] hover:-translate-y-0.5 shadow-md px-5 text-xs transition-all cursor-pointer flex items-center gap-1.5"
                     id="add-member-btn"
                   >
@@ -1475,9 +1506,15 @@ export default function AdminDashboard({
                 <div className="bg-slate-50 border border-slate-200 rounded-[20px] p-6 shadow-xs animate-fade-in">
                   <div className="flex justify-between items-center border-b border-slate-150 pb-3 mb-5">
                     <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <UserPlus className="w-4.5 h-4.5 text-[#1E40AF]" /> New Student Registration Form
+                      <UserPlus className="w-4.5 h-4.5 text-[#1E40AF]" /> {editingMemberRoll ? 'Edit Student Profile Details' : 'New Student Registration Form'}
                     </h3>
-                    <button onClick={() => setShowAddMember(false)} className="text-slate-400 hover:text-black cursor-pointer">
+                    <button 
+                      onClick={() => {
+                        setShowAddMember(false);
+                        setEditingMemberRoll(null);
+                      }} 
+                      className="text-slate-400 hover:text-black cursor-pointer"
+                    >
                       <X className="w-4.5 h-4.5" />
                     </button>
                   </div>
@@ -1510,11 +1547,16 @@ export default function AdminDashboard({
                         type="text" 
                         value={memberForm.rollNumber} 
                         onChange={e => setMemberForm({ ...memberForm, rollNumber: e.target.value })}
-                        className="w-full border border-slate-205 focus:ring-2 focus:ring-blue-105/45 focus:border-blue-500 rounded-[14px] h-14 px-4 text-xs font-bold text-slate-800 bg-white font-mono placeholder-slate-400 uppercase" 
+                        className="w-full border border-slate-205 focus:ring-2 focus:ring-blue-105/45 focus:border-blue-500 rounded-[14px] h-14 px-4 text-xs font-bold text-slate-800 bg-white font-mono placeholder-slate-400 uppercase disabled:opacity-50 disabled:bg-slate-100" 
                         placeholder="e.g. 150 or CST-150"
                         required 
+                        disabled={!!editingMemberRoll}
                       />
-                      <span className="text-[9px] text-[#1E40AF] block mt-1.5 font-bold font-mono">Numbers auto-formatted as CST-roll</span>
+                      {editingMemberRoll ? (
+                        <span className="text-[9px] text-amber-600 block mt-1.5 font-bold font-mono">Roll Number cannot be edited (Unique identifier)</span>
+                      ) : (
+                        <span className="text-[9px] text-[#1E40AF] block mt-1.5 font-bold font-mono">Numbers auto-formatted as CST-roll</span>
+                      )}
                     </div>
                     
                     <div>
@@ -1546,7 +1588,10 @@ export default function AdminDashboard({
                     <div className="md:col-span-4 flex justify-end gap-3 mt-3 border-t border-slate-200 pt-4">
                       <button 
                         type="button" 
-                        onClick={() => setShowAddMember(false)} 
+                        onClick={() => {
+                          setShowAddMember(false);
+                          setEditingMemberRoll(null);
+                        }} 
                         className="btn-premium-secondary text-xs h-12"
                       >
                         Cancel
@@ -1555,7 +1600,7 @@ export default function AdminDashboard({
                         type="submit" 
                         className="btn-premium-primary text-xs h-12"
                       >
-                        Register Member Information
+                        {editingMemberRoll ? 'Save Profile Modifications' : 'Register Member Information'}
                       </button>
                     </div>
                   </form>
@@ -1628,6 +1673,13 @@ export default function AdminDashboard({
                                     title="View full profile, borrow history & clearance"
                                   >
                                     Review
+                                  </button>
+                                  <button 
+                                    onClick={() => handleStartEditMember(st)}
+                                    className="px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded text-[10px] font-bold text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer select-none"
+                                    title="Edit student profile details"
+                                  >
+                                    Edit
                                   </button>
                                   <button 
                                     onClick={() => handleDeleteMember(st.rollNumber)}
@@ -3982,9 +4034,9 @@ export default function AdminDashboard({
                       <div className="relative z-10 space-y-6">
                         {/* Certificate Header */}
                         <div className="space-y-1">
-                          <p className="text-[10px] font-extrabold text-blue-800 uppercase tracking-widest">ScholarLib Central Library System</p>
-                          <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">DHAKA CST INSTITUTION OF EDUCATION</h4>
-                          <p className="text-[9px] text-slate-400 font-mono">Mirpur Academic Belt, Block-D / Central Registry</p>
+                          <p className="text-[10px] font-extrabold text-blue-800 uppercase tracking-widest">CpiLib Central Library System</p>
+                          <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Chattogram Polytechnic Institute</h4>
+                          <p className="text-[9px] text-slate-400 font-mono">Chowdhury Hat, Chattogram / Academic Registry</p>
                         </div>
 
                         {/* Seal Emblem Image Placeholder */}
@@ -3997,7 +4049,7 @@ export default function AdminDashboard({
                           <h5 className="text-xs sm:text-sm font-black text-amber-950 uppercase tracking-widest border-b border-dashed border-amber-200 pb-1 max-w-sm mx-auto">
                             LIBRARY NO-DEMAND CLEARANCE
                           </h5>
-                          <p className="text-[9px] text-slate-500 font-mono">Certificate Serial: CST-LIB-2026-{reviewedStudent.rollNumber.replace(/-/g, '')}</p>
+                          <p className="text-[9px] text-slate-500 font-mono">Certificate Serial: CPI-LIB-2026-{reviewedStudent.rollNumber.replace(/-/g, '')}</p>
                         </div>
 
                         {/* Official Bilingual Body Text */}
@@ -4037,7 +4089,7 @@ export default function AdminDashboard({
                             <span className="text-[9px] text-slate-450 uppercase font-black">System Stamp</span>
                           </div>
                           <div className="text-center font-sans space-y-1">
-                            <div className="h-6 flex items-center justify-center font-mono text-[10px] text-blue-700 font-bold uppercase tracking-widest">ScholarLib Server</div>
+                            <div className="h-6 flex items-center justify-center font-mono text-[10px] text-blue-700 font-bold uppercase tracking-widest">CpiLib Server</div>
                             <span className="block h-px bg-slate-250 w-24 mx-auto"></span>
                             <span className="text-[9px] text-slate-450 uppercase font-black">Authorized Registrar</span>
                           </div>
@@ -4045,10 +4097,23 @@ export default function AdminDashboard({
 
                         {/* QR Code / Barcode Simulation */}
                         <div className="flex justify-center pt-2">
-                          <div className="bg-slate-50 border border-slate-200 px-3 py-1 font-mono text-[9px] text-slate-500 rounded tracking-widest flex items-center gap-1.5 select-none uppercase">
-                            <span>||| | |||| || | | || | | ||</span>
-                            <strong>VERIFIED SYSTEM CLEARANCE</strong>
-                            <span>|| | ||| | ||| ||</span>
+                          <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-slate-200 bg-slate-50/50 max-w-sm mx-auto shadow-xs">
+                            <div className="flex items-end justify-center h-10 gap-[1.5px] px-3 select-none opacity-90">
+                              {[1,3,1,2,4,1,2,1,3,1,1,4,2,1,3,2,1,1,4,1,3,1,2,1,4,2,1,3,1,2,1,4,1,1,3,2,1,2,4,1,2,1].map((w, i) => {
+                                const isSpace = i === 12 || i === 23 || i === 34; // spaces to look real
+                                return (
+                                  <div
+                                    key={i}
+                                    className="h-full bg-slate-900 rounded-sm"
+                                    style={{ width: isSpace ? '0px' : `${w}px` }}
+                                  />
+                                );
+                              })}
+                            </div>
+                            <div className="flex items-center gap-2 font-mono text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                              <span className="text-[7.5px] text-emerald-700 font-extrabold bg-emerald-50 border border-emerald-200/50 px-1 py-0.5 rounded">SECURE CPI-LIB DOC</span>
+                              <span>CPI-LIB-{reviewedStudent.rollNumber.replace(/[^A-Za-z0-9]/g, '')}-SEC</span>
+                            </div>
                           </div>
                         </div>
                       </div>
